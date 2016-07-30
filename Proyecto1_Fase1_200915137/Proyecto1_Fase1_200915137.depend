@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1469821024 source:/home/jonatan/Proyectos/C/Proyecto1_Fase1_200915137/main.c
+	<stdio.h>
+	<stdlib.h>
+
