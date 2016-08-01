@@ -1,5 +1,14 @@
 #include <stdio.h>
+//atoi
 #include <stdlib.h>
+//directorios
+#include <dirent.h>
+//crear directorios
+#include <sys/stat.h>
+//comparacion de cadenas
+#include <string.h>
+//time
+#include <time.h>
 
 struct struc_disco{
     char nombre[256];
@@ -18,7 +27,7 @@ int main()
 }
 
 void crear_disco(){
-printf("hola mundo");
+printf("Se creo un disco duro");
 
 }
 
