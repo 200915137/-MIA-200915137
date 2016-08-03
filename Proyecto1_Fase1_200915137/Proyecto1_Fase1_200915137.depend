@@ -3,7 +3,11 @@
 	<stdio.h>
 	<stdlib.h>
 
-1469853325 source:/home/jonatan/Documentos/[MIA]200915137/-MIA-200915137/Proyecto1_Fase1_200915137/main.c
+1470197666 source:/home/jonatan/Documentos/[MIA]200915137/-MIA-200915137/Proyecto1_Fase1_200915137/main.c
 	<stdio.h>
 	<stdlib.h>
+	<dirent.h>
+	<sys/stat.h>
+	<string.h>
+	<time.h>
 
