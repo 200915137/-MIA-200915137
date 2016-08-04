@@ -1,3 +1,16 @@
+/*
+ * Universidad de San Carlos de Guatemala
+ * Facultad de Ingenieria
+ * Escuela de Ciencias y Sistemas
+ * Manejo e implementacion de archivos
+ * Seccion A-
+ * Laboratorio
+ * Proyecto Unico
+ * Fase 1
+ */
+
+//---------------------Area de librerias--------------------------
+
 #include <stdio.h>
 //atoi
 #include <stdlib.h>
@@ -10,13 +23,18 @@
 //time
 #include <time.h>
 
+//-------------------------------------------------------------------------
+
+//---------------------Area de estructuras--------------------------
+
 struct struc_disco{
     char nombre[52];
     char tamanio[9];
     char particion[9];
-    char puntero[9];
+    char puntero[9]; //direccion al mbr
 };
 
+//---------------------Area de variables globales--------------------------
 
 //bit utilizado para guardar 0's
 char buffer[1];
@@ -24,15 +42,24 @@ char buffer[1];
 int ifor=0;
 //direccion del disco actual
 char directorio[58];
-//extension de Disco ".sdk"
+//extension de Disco ".dsk"
 char extension_disco[4]=".dsk";
 
+//-------------------------------------------------------------------------
+
+
+//--------------------------------Prototipos-------------------------------
 
 void menu();
 void comandos();
 void crear_disco();
 int escribeInfoDirectorio(char *nombreFichero);
+void eliminar_disco();
+void particionar_disco();
 void tipo_de_tamanio();
+
+//-------------------------------------------------------------------------
+
 int main()
 {
 
@@ -60,7 +87,7 @@ void menu()
         printf("MENU PRINCIPAL\n\n");
         printf("1. Crear disco\n");
         printf("2. Eliminar Disco\n");
-        printf("3. Montar Disco\n");
+        printf("3. particionar Disco\n");
         printf("4. Desmontar\n");
         printf("5. Salir\n");
         printf("Elija opcion: ");
@@ -71,7 +98,7 @@ void menu()
                 crear_disco();
             break;
             case 2:
-
+                eliminar_disco();
             break;
             case 3:
             break;
@@ -135,11 +162,14 @@ void crear_disco(){
     sprintf(tdisco.puntero, "%d", (int)sizeof(tdisco));
     printf("Creando disco...\n");
 
-    if(escribeInfoDirectorio(ruta))
+    //Si el numero que retorna es igual a 1 indica que es un directorio la ruta
+    if(escribeInfoDirectorio(ruta)==1)
     {
         printf("se encontro el directorio %s\n", ruta);
     }
-    else
+
+    //Si el numero que retorna es igual a 0 indica que es un fichero
+    if(escribeInfoDirectorio(ruta)==0)
     {
         /*
          * Se crea un directorio DIRECTORIO con permisos 777 y se comprueba.
@@ -164,6 +194,7 @@ void crear_disco(){
         for(ifor=0;ifor<tamanio*1024;ifor++)
             fwrite (buffer, sizeof(buffer), 1024, f);
     }
+
 
     //guardando informacion del disco
     rewind(f);
@@ -205,18 +236,40 @@ int escribeInfoDirectorio(char *nombreFichero)
     }
     else
     {
-        /* Se comprueba si es un directorio */
-        if (S_ISDIR(datosFichero.st_mode)){
-            printf ("es un directorio\n");
-            return 1;
+        /* Se comprueba si es un fichero normal o un link */
+        if (S_ISREG(datosFichero.st_mode)){
+            printf ("es un fichero\n");
+            return 2;
+        }else{
+
+            /* Se comprueba si es un directorio */
+            if (S_ISDIR(datosFichero.st_mode)){
+                printf ("es un directorio\n");
+                return 1;
+            }
+
+            /* Es otra cosa */
+            else
+                printf ("Sepa que es...!!\n");
         }
 
-        /* Es otra cosa */
-        else
-            printf ("no es fichero, directorio, link ni link simbólico\n");
-
-
     }
+}
+
+void eliminar_disco()
+{
+    char ruta[52];
+    printf("Ingrese la ruta del Disco a eliminar...\n");
+    scanf("%s", &ruta);
+    if(escribeInfoDirectorio(ruta)==2)
+    {
+        unlink (ruta);
+    }
+    else
+    {
+        printf("No es un fichero la ruta ingresada..!!");
+    }
+
 }
 
 void tipo_de_tamanio()
