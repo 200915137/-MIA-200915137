@@ -48,15 +48,16 @@ char extension_disco[4]=".dsk";
 //-------------------------------------------------------------------------
 
 
-//--------------------------------Prototipos-------------------------------
+//--------------------------Prototipos del Programa------------------------
 
 void menu();
 void comandos();
 void crear_disco();
 int escribeInfoDirectorio(char *nombreFichero);
 void eliminar_disco();
-void particionar_disco();
+void crear_particion();
 void tipo_de_tamanio();
+char *ruta();
 
 //-------------------------------------------------------------------------
 
@@ -64,10 +65,22 @@ int main()
 {
 
     menu();
-     //comandos();
+    //system("mkdir /home/jonatan/hobbitelmashueco/");
     return 0;
 }
 
+char *ruta()
+{
+    char *ruta_entrada[50];
+    printf("Ingrese el path... ");
+    scanf("%s", &ruta_entrada);
+
+
+    return ruta_entrada;
+
+}
+
+//concatena la ruta del directorio+nombre+extension
 void set_disco(char ruta_carpeta[52],char nombre[52]){
     sprintf(directorio, "%s%s%s",ruta_carpeta, nombre,extension_disco);
 
@@ -77,17 +90,10 @@ void menu()
 {
    int opciones;
     do{
-        char codigo[10];
-        char nombre[50];
-        char telefono[12];//+502 4285-5821
-
-        char palabra[30];
-
-
         printf("MENU PRINCIPAL\n\n");
         printf("1. Crear disco\n");
         printf("2. Eliminar Disco\n");
-        printf("3. particionar Disco\n");
+        printf("3. crear particion\n");
         printf("4. Desmontar\n");
         printf("5. Salir\n");
         printf("Elija opcion: ");
@@ -101,6 +107,7 @@ void menu()
                 eliminar_disco();
             break;
             case 3:
+                crear_particion();
             break;
             case 4:
             break;
@@ -175,7 +182,19 @@ void crear_disco(){
          * Se crea un directorio DIRECTORIO con permisos 777 y se comprueba.
          * 4+2+1=7 es decir puedo leer,escribir y ejecutar
          */
-        mkdir (ruta, 0777);
+
+        // vos esque la aux de nosotros dijo que no pidiamos usar la libreria
+        //dir.h para crear las carpetas,
+        //librerira Dir.h
+
+        //mkdir (ruta, 0777);    <=== esta seria la instruccion don la esta libreria
+
+
+        system("mkdir /home/jonatan/hobbitelmashueco/");//<== esta linea que recibe una cadena
+        //aqui que ando haciendo es enviarle a la termnal la instruccion que esta en la
+        //cadena que decis vos y si funciona vos pues entonces
+        // con esa la dejamos vaaa
+
         //escribeInfoDirectorio(ruta);
     }
 
@@ -269,6 +288,45 @@ void eliminar_disco()
     {
         printf("No es un fichero la ruta ingresada..!!");
     }
+
+}
+
+void crear_particion()
+{
+     int opciones;
+     do{
+         printf("MENU PRINCIPAL\n\n");
+         printf("1. Crear disco\n");
+         printf("2. Eliminar Disco\n");
+         printf("3. crear particion\n");
+         printf("4. Desmontar\n");
+         printf("5. Salir\n");
+         printf("Elija opcion: ");
+         scanf("%d", &opciones);
+         switch(opciones)
+         {
+             case 1:
+                 crear_disco();
+             break;
+             case 2:
+                 eliminar_disco();
+             break;
+             case 3:
+                 crear_particion();
+             break;
+             case 4:
+             break;
+             case 5:
+             break;
+             default:
+             printf("Error opcion incorrecta\n\n");
+             break;
+         }
+     }while(opciones != 5);
+
+    char *ruta_entrada[52];
+    printf("Ingrese el path... ");
+    scanf("%s", &ruta_entrada);
 
 }
 
