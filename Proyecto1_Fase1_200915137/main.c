@@ -325,7 +325,7 @@ void crear_particion()
 }
 
 //creando particiones, mostrando opciones
-void crear_particion_opciones(struct struct_disco tdisco)
+void crear_particion_opciones(struct struc_disco tdisco)
 {
     printf("\n");
     printf("**********************\n");
