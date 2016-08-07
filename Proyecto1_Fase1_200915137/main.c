@@ -34,6 +34,15 @@ struct struc_disco{
     char puntero[9]; //direccion al mbr
 };
 
+struct struct_mbr{
+    char mbr_byte_particion[10];//Contiene el byte donde inicia la partición.
+    char mbr_byte_particion_desactivada[10];//Contiene el byte donde inicia la partición.
+    char mbr_tipo_sistema_archivos[7];//Contiene el tipo de sistema de archivos.
+    char mbr_tipo_particion[12];//Contiene el tipo de partición.
+    char mbr_particion_activa[4];//Indica si la partición es la activa, está será la por defecto que iniciará para realizar operaciones sobre el sistema de archivos.
+    char mbr_size_bytes[10];//Contiene el tamaño en bytes del sistema de archivos.
+};
+
 //---------------------Area de variables globales--------------------------
 
 //bit utilizado para guardar 0's
@@ -50,35 +59,18 @@ char extension_disco[4]=".dsk";
 
 //--------------------------Prototipos del Programa------------------------
 
-void menu();
+/*void menu();
 void comandos();
 void crear_disco();
 int escribeInfoDirectorio(char *nombreFichero);
 void eliminar_disco();
 void crear_particion();
 void tipo_de_tamanio();
-char *ruta();
+char *ruta();*/
 
 //-------------------------------------------------------------------------
 
-int main()
-{
 
-    menu();
-    //system("mkdir /home/jonatan/hobbitelmashueco/");
-    return 0;
-}
-
-char *ruta()
-{
-    char *ruta_entrada[50];
-    printf("Ingrese el path... ");
-    scanf("%s", &ruta_entrada);
-
-
-    return ruta_entrada;
-
-}
 
 //concatena la ruta del directorio+nombre+extension
 void set_disco(char ruta_carpeta[52],char nombre[52]){
@@ -293,40 +285,53 @@ void eliminar_disco()
 
 void crear_particion()
 {
-     int opciones;
-     do{
-         printf("MENU PRINCIPAL\n\n");
-         printf("1. Crear disco\n");
-         printf("2. Eliminar Disco\n");
-         printf("3. crear particion\n");
-         printf("4. Desmontar\n");
-         printf("5. Salir\n");
-         printf("Elija opcion: ");
-         scanf("%d", &opciones);
-         switch(opciones)
-         {
-             case 1:
-                 crear_disco();
-             break;
-             case 2:
-                 eliminar_disco();
-             break;
-             case 3:
-                 crear_particion();
-             break;
-             case 4:
-             break;
-             case 5:
-             break;
-             default:
-             printf("Error opcion incorrecta\n\n");
-             break;
-         }
-     }while(opciones != 5);
+     char ruta[52];
+    char tamanio[52];
+    char nom[52];
 
-    char *ruta_entrada[52];
-    printf("Ingrese el path... ");
-    scanf("%s", &ruta_entrada);
+    printf("Ingrese el la ruta..\n");
+    scanf("%s", &ruta);
+    printf("ingrese el tamanio..\n");
+    scanf("%s", &tamanio);
+    printf("ingrese el nombre de la particion..\n");
+    scanf("%s", &nom);
+
+    if(escribeInfoDirectorio(ruta)==2)
+    {
+        FILE *f=fopen(ruta, "rb+");
+        printf("\n");
+        printf("**********************\n");
+        printf("RUTA DE DISCO: %s \n",ruta);
+        printf("**********************\n");
+
+        //mostrando informacion del disco actual
+        struct struc_disco tdisco;
+        fread(&tdisco, sizeof(tdisco), 1, f);
+        fclose(f);
+        printf("tamaño: %s MB \n", tdisco.tamanio);
+        printf("particiones: %s\n\n", tdisco.particion);
+
+        if(atoi(tdisco.particion)==0)
+            crear_particion_opciones(tdisco);
+        else
+            printf("\n!!!!!!!!!!!!!!!!!!!!!\nEl disco duro ya contiene 2 particiones primarias \nFormatear para crear nuevas\n!!!!!!!!!!!!!!!!!!!!!\n\n");
+        //entrar_al_disco(unidad);
+    }
+    else
+    {
+        printf("El archivo con ruta %s no existe...!!",ruta);
+    }
+
+}
+
+//creando particiones, mostrando opciones
+void crear_particion_opciones(struct struct_disco tdisco)
+{
+    printf("\n");
+    printf("**********************\n");
+    printf("CREANDO PARTICION\n");
+    printf("DISCO: %s \n",tdisco.nombre);
+    printf("**********************\n\n");
 
 }
 
@@ -334,11 +339,6 @@ void tipo_de_tamanio()
 {
 int opciones;
     do{
-        char codigo[10];
-        char nombre[50];
-        char telefono[12];//+502 4285-5821
-
-        char palabra[30];
 
 
         printf("MENU PRINCIPAL\n\n");
@@ -375,4 +375,16 @@ char comando[20] = "";
             salida = 0;
         }
     }
+}
+
+
+
+
+// inicio
+int main()
+{
+
+    menu();
+    //system("mkdir /home/jonatan/hobbitelmashueco/");
+    return 0;
 }
