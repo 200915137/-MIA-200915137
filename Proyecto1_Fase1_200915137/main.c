@@ -27,14 +27,36 @@
 
 //---------------------Area de estructuras--------------------------
 
-struct struc_disco{
+typedef struct struc_disco{
     char nombre[52];
     char tamanio[9];
     char particion[9];
     char puntero[9]; //direccion al mbr
-};
+}info_disco;
 
-struct struct_mbr{
+typedef struct partition
+{
+    char part_status; /*Indica si la particion esta activa o no*/
+    char part_type; /*Indica el tipo de particion, primaria(P) o extendida (E)*/
+    char part_fit; /*Tipo de ajuste de la particion { BF(best) FF(First) WF(worst)}*/
+    int part_start; /*Indica en que byte del disco inicia la particion*/
+    int part_size; /*Contiene el total de la particion en byte*/
+    char part_name[16]; /*Nombre de la partcion*/
+}struct_partition;
+
+typedef struct mbr
+{
+    int mbr_tamanio; /*Tamanio total del disco en byte*/
+    timer_t mbr_fecha_creacion; /*fecha y hora de creacion del disco*/
+    int mbr_disk_signature; /*Numero random, que identificara de forma unica a cada disco*/
+    struct_partition mbr_partition_1; /*Estructura con informacion de la particion 1*/
+    struct_partition mbr_partition_2; /*Estructura con informacion de la particion 2*/
+    struct_partition mbr_partition_3; /*Estructura con informacion de la particion 3*/
+    struct_partition mbr_partition_4; /*Estructura con informacion de la particion 4*/
+}struct_mbr;
+
+
+struct struct_mbr1{
     char mbr_byte_particion[10];//Contiene el byte donde inicia la partición.
     char mbr_byte_particion_desactivada[10];//Contiene el byte donde inicia la partición.
     char mbr_tipo_sistema_archivos[7];//Contiene el tipo de sistema de archivos.
@@ -51,30 +73,15 @@ char buffer[1];
 int ifor=0;
 //direccion del disco actual
 char directorio[58];
-//extension de Disco ".dsk"
-char extension_disco[4]=".dsk";
 
 //-------------------------------------------------------------------------
 
-
-//--------------------------Prototipos del Programa------------------------
-
-/*void menu();
-void comandos();
-void crear_disco();
-int escribeInfoDirectorio(char *nombreFichero);
-void eliminar_disco();
-void crear_particion();
-void tipo_de_tamanio();
-char *ruta();*/
-
-//-------------------------------------------------------------------------
 
 
 
 //concatena la ruta del directorio+nombre+extension
 void set_disco(char ruta_carpeta[52],char nombre[52]){
-    sprintf(directorio, "%s%s%s",ruta_carpeta, nombre,extension_disco);
+    sprintf(directorio, "%s%s",ruta_carpeta, nombre);
 
 }
 
@@ -114,7 +121,7 @@ void menu()
 }
 
 void crear_disco(){
-    struct struc_disco tdisco;
+    info_disco tdisco;
     char ruta[52];
     int opt=0;
     printf("Ingresar el nombre del disco. \n");
@@ -175,19 +182,12 @@ void crear_disco(){
          * 4+2+1=7 es decir puedo leer,escribir y ejecutar
          */
 
-        // vos esque la aux de nosotros dijo que no pidiamos usar la libreria
-        //dir.h para crear las carpetas,
-        //librerira Dir.h
 
         //mkdir (ruta, 0777);    <=== esta seria la instruccion don la esta libreria
 
 
-        system("mkdir /home/jonatan/hobbitelmashueco/");//<== esta linea que recibe una cadena
-        //aqui que ando haciendo es enviarle a la termnal la instruccion que esta en la
-        //cadena que decis vos y si funciona vos pues entonces
-        // con esa la dejamos vaaa
+        system("mkdir /home/jonatan/hobbitelmashueco/");
 
-        //escribeInfoDirectorio(ruta);
     }
 
     //creando el disco
@@ -305,16 +305,16 @@ void crear_particion()
         printf("**********************\n");
 
         //mostrando informacion del disco actual
-        struct struc_disco tdisco;
+        info_disco tdisco;
         fread(&tdisco, sizeof(tdisco), 1, f);
         fclose(f);
         printf("tamaño: %s MB \n", tdisco.tamanio);
         printf("particiones: %s\n\n", tdisco.particion);
 
         if(atoi(tdisco.particion)==0)
-            crear_particion_opciones(tdisco);
+            crear_particion_opciones(tdisco,tamanio);
         else
-            printf("\n!!!!!!!!!!!!!!!!!!!!!\nEl disco duro ya contiene 2 particiones primarias \nFormatear para crear nuevas\n!!!!!!!!!!!!!!!!!!!!!\n\n");
+            printf("\n!!!!!!!!!!!!!!!!!!!!!\nEl disco duro ya contiene 4 particiones primarias \nFormatear para crear nuevas\n!!!!!!!!!!!!!!!!!!!!!\n\n");
         //entrar_al_disco(unidad);
     }
     else
@@ -325,7 +325,7 @@ void crear_particion()
 }
 
 //creando particiones, mostrando opciones
-void crear_particion_opciones(struct struc_disco tdisco)
+void crear_particion_opciones(info_disco tdisco,char tamanio_partition[52])
 {
     printf("\n");
     printf("**********************\n");
@@ -333,56 +333,110 @@ void crear_particion_opciones(struct struc_disco tdisco)
     printf("DISCO: %s \n",tdisco.nombre);
     printf("**********************\n\n");
 
+    //calculando tamano para cada particion
+    struct_mbr mbr_;
+    int info_disco=sizeof(tdisco);
+    int info_mbr=sizeof(mbr_);
+    int total_disco=atoi(tdisco.tamanio)*1024*1024; // en bytes
+
+    int total_partition=atoi(tamanio_partition)*1024*1024;
+    int total=10*1024;
+    int tempo=0;
+
+    int i;
+    int size;
+    int tamanio;
+
+    FILE *f=fopen(directorio, "rb+"); //lee numeros binarios
+
+    //espacio del mbr
+    fwrite (&mbr_, sizeof(mbr_), 1, f);
+    fclose(f);
+
+    FILE *f=fopen(directorio, "rb+"); //lee numeros binarios
+
+    fseek(f,1*sizeof(mbr_), SEEK_SET);
+    //sprintf(num,num,"jose")
+    mbr_.
+    fwrite(&num,sizeof(num),1,f);
+    fclose(f);
+
+
 }
 
-void tipo_de_tamanio()
+/*
+struct numero
 {
-int opciones;
-    do{
+    int num1;
+    int num2;
+    int num3;
+};
 
+struct caracteres
+{
+    char cadena[12];
+    char cadena2[12];
+    char cadena3[12];
+};
 
-        printf("MENU PRINCIPAL\n\n");
-        printf("1. Crear disco en Kilobytes\n");
-        printf("2. Crear disco en Megabytes\n");
-        printf("3. Salir\n");
-        printf("Elija opcion: ");
-        scanf("%d", &opciones);
-        switch(opciones)
-        {
-            case 1:
-
-            break;
-            case 2:
-
-            break;
-
-            default:
-            printf("Se creo disco con tamanio en Megas\n\n");
-            break;
-        }
-    }while(opciones != 2);
-}
-
-void comandos(){
-char comando[20] = "";
-    int salida = 1;
-    while(salida != 0){
-        printf("Ingrese el comando: ");
-        fflush(stdin);
-        scanf("%s", &comando);
-        printf("Comando escrito: %s\n", comando);
-        if(comando[0] == 's' && comando[1] == 'a' && comando[2] == 'l' && comando[3] == 'i' && comando[4] == 'r'){
-            salida = 0;
-        }
-    }
-}
-
+struct otro
+{
+    char cadena[12];
+};
+*/
 
 
 
 // inicio
 int main()
 {
+
+    /*struct numero num; 12 byte
+    struct caracteres carar; 36 byte
+    struct otro o; 12 byte
+    struct struc_disco tdisco;
+
+
+    FILE *f = fopen ("/home/jonatan/disco.dsk", "w+b");
+
+
+    for(ifor=0;ifor<10;ifor++)
+        fwrite (&num, sizeof(num), 1, f);
+        120+360+120=600bytes
+
+
+    for(ifor=0;ifor<10;ifor++)
+        fwrite (&carar, sizeof(carar), 1, f);
+
+    for(ifor=0;ifor<10;ifor++)
+        fwrite (&o, sizeof(o), 1, f);
+
+    //guardando informacion del disco
+    rewind(f);
+    fwrite(&tdisco,sizeof(tdisco),1,f);
+    fclose(f);
+
+    STRUC1 12
+    STRUC2 24
+   ==> STRUC3 36
+
+    f = fopen ("/home/jonatan/disco.dsk", "rb+");
+    fseek(f,3*sizeof(num), SEEK_SET);
+    //sprintf(num,num,"jose")
+    num.num1=1;
+    num.num2=2;
+    num.num3=3;
+    fwrite(&num,sizeof(num),1,f);
+    fclose(f);
+
+    f = fopen ("/home/jonatan/disco.dsk", "rb+");
+    fseek(f,3*sizeof(num), SEEK_SET);
+    struct numero n;
+    fread(&n, sizeof(n), 1,f);
+    printf("mi dato %d %d %d\n", n.num1, n.num2, n.num3);
+    fclose(f);*/
+
+
 
     menu();
     //system("mkdir /home/jonatan/hobbitelmashueco/");
