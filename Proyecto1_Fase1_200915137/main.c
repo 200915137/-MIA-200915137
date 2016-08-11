@@ -9,34 +9,29 @@
  * Fase 1
  */
 
-//---------------------Area de librerias--------------------------
+//------------------------Area de librerias-----------------------------
 
 #include <stdio.h>
 //atoi
 #include <stdlib.h>
 //directorios
 #include <dirent.h>
-//crear directorios
+//crear directorios y validarlos
 #include <sys/stat.h>
 //comparacion de cadenas
 #include <string.h>
 //time
 #include <time.h>
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------
 
-//---------------------Area de estructuras--------------------------
 
-typedef struct struc_disco{
-    char nombre[52];
-    char tamanio[9];
-    char particion[9];
-    char puntero[9]; //direccion al mbr
-}info_disco;
+//------------------------Area de estructuras----------------------------
 
 #pragma pack(push, 1)
 
-typedef struct partition//28
+//tamanio 27 bytes
+typedef struct partition
 {
     char part_status; /*Indica si la particion esta activa o no*/
     char part_type; /*Indica el tipo de particion, primaria(P) o extendida (E)*/
@@ -47,10 +42,10 @@ typedef struct partition//28
 }struct_partition;
 
 
-
-typedef struct mbr //136
+//Tamaio 148 bytes
+typedef struct mbr //
 {
-    char nombre[52];
+    char nombre[24]; /*nombre del disco*/
     int mbr_tamanio; /*Tamanio total del disco en byte*/
     timer_t mbr_fecha_creacion; /*fecha y hora de creacion del disco*/
     int mbr_disk_signature; /*Numero random, que identificara de forma unica a cada disco*/
@@ -60,18 +55,23 @@ typedef struct mbr //136
     struct_partition mbr_partition_4; /*Estructura con informacion de la particion 4*/
 }struct_mbr;
 
+
+//Tamanio 30 bytes
+typedef struct ebr{
+    char ebr_part_status; /*Indica si la particion esta activa o no.*/
+    char ebr_part_fit[2]; /*Tipo de ajuste de la particion. Tendra los valores BF, FF, WF*/
+    int ebr_part_star; /*Indica en que byte inicia la particion*/
+    int ebr_part_size; /*Contiene el tamano total de la particion en byte*/
+    int ebr_part_next; /*Byte en el que esta el proximo EBR. -1 si no hay siguiente*/
+    char ebr_part_name[16]; /*Nombre de la particion*/
+}struct_ebr;
+
 #pragma pack(pop)
 
-struct struct_mbr1{
-    char mbr_byte_particion[10];//Contiene el byte donde inicia la partición.
-    char mbr_byte_particion_desactivada[10];//Contiene el byte donde inicia la partición.
-    char mbr_tipo_sistema_archivos[7];//Contiene el tipo de sistema de archivos.
-    char mbr_tipo_particion[12];//Contiene el tipo de partición.
-    char mbr_particion_activa[4];//Indica si la partición es la activa, está será la por defecto que iniciará para realizar operaciones sobre el sistema de archivos.
-    char mbr_size_bytes[10];//Contiene el tamaño en bytes del sistema de archivos.
-};
+//-----------------------------------------------------------------------
 
-//---------------------Area de variables globales--------------------------
+
+//--------------------Area de variables globales-------------------------
 
 //bit utilizado para guardar 0's
 char buffer[1];
@@ -79,14 +79,24 @@ char buffer[1];
 int ifor=0;
 //direccion del disco actual
 char directorio[58];
+//Numero de particiones primarias
+int numero_particiones_primarias;
+//Numero de particiones logicas
+int numero_particiones_logicas;
+//Esta variable es a la que se le va asignar cada comando que se va analizar
+char comando_entrada[100];
+//Un char para salir del sistema
+char output;
+//Esta es una bandera para que termine de validad los comandos
+int bandera_fin=0;
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------
 
 
+//concatena la ruta del directorio+nombre
 
-
-//concatena la ruta del directorio+nombre+extension
-void set_disco(char ruta_carpeta[52],char nombre[52]){
+void set_disco(char ruta_carpeta[52],char nombre[52])
+{
     sprintf(directorio, "%s%s",ruta_carpeta, nombre);
 
 }
@@ -115,6 +125,7 @@ void menu()
                 crear_particion();
             break;
             case 4:
+                ver();
             break;
             case 5:
             break;
@@ -126,11 +137,13 @@ void menu()
 
 }
 
+//metodo par crear discos
 void crear_disco(){
-    //info_disco tdisco;
+
     struct_mbr infodisco;
     char ruta[52];
     int opt=0;
+    //datos que se se ingresa
     printf("Ingresar el nombre del disco. \n");
     scanf("%s", infodisco.nombre);
     printf("\n");
@@ -171,6 +184,7 @@ void crear_disco(){
     printf("Ingrese la ruta de destino...\n");
     scanf("%s",&ruta);
 
+    //asignar datos en la variable infodisco de tipo mbr
     infodisco.mbr_tamanio = tamanio;
     infodisco.mbr_disk_signature=0;
     infodisco.mbr_partition_1.part_size=0;
@@ -180,13 +194,13 @@ void crear_disco(){
 
     printf("Creando disco...\n");
 
-    //Si el numero que retorna es igual a 1 indica que es un directorio la ruta
+    //Si el numero que retorna es igual a 1 indica que es un directorio
     if(escribeInfoDirectorio(ruta)==1)
     {
         printf("se encontro el directorio %s\n", ruta);
     }
 
-    //Si el numero que retorna es igual a 0 indica que es un fichero
+    //Si el numero que retorna es igual a 1 indica que es un fichero
     if(escribeInfoDirectorio(ruta)==0)
     {
         /*
@@ -202,33 +216,39 @@ void crear_disco(){
 
     }
 
-    //creando el disco
+    //Metodo que concatena dos vectores y lo asigna a una variable global
     set_disco(ruta,infodisco.nombre);
+
     FILE *f = fopen (directorio, "w+b");
 
     if(opt==1)
     {
+        //tamanio en bytes
         for(ifor=0;ifor<tamanio;ifor++)
             fwrite (buffer, sizeof(buffer), 1024, f);
     }
 
     if(opt==2 || opt==3)
     {
+        //tamanio en megabytes
         for(ifor=0;ifor<tamanio*1024;ifor++)
             fwrite (buffer, sizeof(buffer), 1024, f);
     }
 
 
     //guardando informacion del disco
+    //rewind indica el inicio de un archivo en este caso es un disco
     rewind(f);
+    //otra manera de indicar el inicio de un archivo
     //fseek(f,0,SEEK_SET);
+    //escribe un bloque de tipo struct_mbr de 148 bytes
     fwrite(&infodisco,sizeof(infodisco),1,f);
     fclose(f);
     printf("Disco %s fue creado exitosamente ", infodisco.nombre);
     printf("en %s\n\n", directorio);
 }
 
-
+//Metodo para validar una ruta o fichero
 int escribeInfoDirectorio(char *nombreFichero)
 {
 
@@ -241,7 +261,7 @@ int escribeInfoDirectorio(char *nombreFichero)
      * Comprobación del parámetro de entrada
      */
     if (nombreFichero == NULL)
-        return;
+        return 0;
 
     /*
      * Empezamos a escribir el resultado de la comprobación.
@@ -287,6 +307,7 @@ void eliminar_disco()
     scanf("%s", &ruta);
     if(escribeInfoDirectorio(ruta)==2)
     {
+        //esta manera de eliminar es usando el la libreria Dir.h
         unlink (ruta);
     }
     else
@@ -303,11 +324,12 @@ void crear_particion()
     char tamanio[52];
     char nom[52];
 
-    /*
-    printf("Ingrese el la ruta..\n");
-    scanf("%s", &ruta);
+
+
     printf("ingrese el tamanio..\n");
     scanf("%s", &tamanio);
+    /*printf("Ingrese el la ruta..\n");
+    scanf("%s", &ruta);
     printf("ingrese el nombre de la particion..\n");
     scanf("%s", &nom);
     */
@@ -320,14 +342,17 @@ void crear_particion()
         printf("RUTA DE DISCO: %s \n",ruta);
         printf("**********************\n");
 
-        //mostrando informacion del disco actual
+
 
         struct_mbr infodisco;
         FILE *f=fopen(ruta, "rb+");
+        //inicio del archivo
         rewind(f);
+        //leer el primer bloque del archivo
         fread(&infodisco, sizeof(infodisco), 1, f);
         fclose(f);
 
+        //mostrar informacion del bloque de tipo struct_mbr
         printf("tamaño: %d MB \n", infodisco.mbr_tamanio);
         printf("particiones: %d\n\n", 0);
         printf("Dato %d \n",infodisco.mbr_partition_1.part_size);
@@ -366,6 +391,7 @@ void crear_particion_opciones(struct_mbr infodisco,char tamanio_partition[52], c
     fseek(f,0, SEEK_SET);
     struct_mbr m1;
     fread(&m1, sizeof(m1), 1, f);
+    //datos que ya esta escritos en el disco
     printf("tamaño: %d MB \n", m1.mbr_tamanio);
     printf("particiones: %d\n\n", 0);
     printf("Dato %d \n",m1.mbr_partition_1.part_size);
@@ -375,38 +401,127 @@ void crear_particion_opciones(struct_mbr infodisco,char tamanio_partition[52], c
     fclose(f);
 
 
+}
 
-    f=fopen(ruta, "rb+"); //lee numeros binarios
+void ver()
+{
+
+    FILE *f;
+    f=fopen("/home/jonatan/lol.dsk","rb+");
+    struct_mbr l;
     rewind(f);
-    struct_mbr mbr_;
-    mbr_.mbr_disk_signature=99;
-    mbr_.mbr_tamanio=infodisco.mbr_tamanio;
-    mbr_.mbr_fecha_creacion=t;
-    mbr_.mbr_partition_1.part_size=111;
-    mbr_.mbr_partition_2.part_size=222;
-    mbr_.mbr_partition_3.part_size=333;
-    mbr_.mbr_partition_4.part_size=666;
-    fwrite(&mbr_,sizeof(mbr_),1,f);
+    fread(&l,sizeof(l),1, f);
+    /*tamanio_disco=l.mbr_tamanio*1024*1024;//tamanio en bytes
+    printf("\ntamanio disco %d bytes\n", tamanio_disco);
+    printf("nombre de disco %s\n", l.nombre);
+    printf("tamanio particion %d\n", l.mbr_partition_1.part_size);
+    printf("nombre particion %s\n", l.mbr_partition_1.part_name);
+    printf("inicio %d\n", l.mbr_partition_1.part_start);
+    printf("tipo %c\n", l.mbr_partition_1.part_type);*/
     fclose(f);
 
-    printf("**********Despues********* \n");
-    f=fopen(ruta, "rb+"); //lee numeros binarios
+    //tamanio_disco_libre=tamanio_disco-sizeof(l);
+
+    //tamanio de particion 1
+    f=fopen("/home/jonatan/lol.dsk","rb+");
+    struct_mbr tem;
     fseek(f,0, SEEK_SET);
-    struct_mbr m;
-    fread(&m, sizeof(m), 1, f);
-    printf("tamaño: %d MB \n", m.mbr_tamanio);
-    printf("particiones: %d\n\n", 0);
-    printf("Dato %d \n",m.mbr_partition_1.part_size);
-    printf("Dato %d \n",m.mbr_partition_2.part_size);
-    printf("Dato %d \n",m.mbr_partition_3.part_size);
-    printf("Dato %d \n",m.mbr_partition_4.part_size);
+    if(l.mbr_partition_1.part_size==0){
+        numero_particiones_primarias+=1;
+        tem.mbr_tamanio=l.mbr_tamanio;
+        tem.mbr_fecha_creacion=l.mbr_fecha_creacion;
+        sprintf(tem.nombre,l.nombre);
+        sprintf(tem.mbr_partition_1.part_fit,"WF");
+        sprintf(tem.mbr_partition_1.part_name,"particion 1");
+        tem.mbr_partition_1.part_size=12*1024*1024;
+        tem.mbr_partition_1.part_start=sizeof(tem);
+        tem.mbr_partition_1.part_status="f"; //v de verdadero
+        tem.mbr_partition_1.part_type='p';
+        fwrite(&tem, sizeof(tem),1,f );
+    }
     fclose(f);
-    int a;
 
+
+    f=fopen("/home/jonatan/lol.dsk","rb+");
+    rewind(f);
+    fread(&l,0,1, f);
+    /*tamanio_disco=l.mbr_tamanio*1024*1024;//tamanio en bytes
+    printf("\ntamanio disco %d bytes\n", tamanio_disco);
+    printf("nombre de disco %s\n", l.nombre);
+    printf("tamanio particion %d\n", l.mbr_partition_1.part_size);
+    printf("nombre particion %s\n", l.mbr_partition_1.part_name);
+    printf("inicio %d\n", l.mbr_partition_1.part_start);
+    printf("tipo %c\n", l.mbr_partition_1.part_type);*/
+    fclose(f);
+
+    //tamanio de particion 2
+    f=fopen("/home/jonatan/lol.dsk","rb+");
+    fseek(f,0, SEEK_SET);
+    if(l.mbr_partition_2.part_size==0){
+        numero_particiones_primarias+=1;
+        tem.mbr_tamanio=l.mbr_tamanio;
+        tem.mbr_fecha_creacion=l.mbr_fecha_creacion;
+        sprintf(tem.nombre,l.nombre);
+        tem.mbr_partition_2.part_fit='l';
+        sprintf(tem.mbr_partition_2.part_name,"particion 2");
+        tem.mbr_partition_2.part_size=12*1024*1024;
+        tem.mbr_partition_2.part_start=sizeof(tem)+12*1024*1024;
+        tem.mbr_partition_2.part_status="f"; //v si esta activo f si esta desactivo
+        tem.mbr_partition_2.part_type='p';
+        fwrite(&tem, sizeof(tem),1,f );
+    }
+
+    fclose(f);
+
+
+
+
+    f=fopen("/home/jonatan/lol.dsk","rb+");
+    rewind(f);
+    fread(&l,0,1, f);
+    struct tm *tm;
+    char fecha[50];
+    char hora[50];
+    l.mbr_fecha_creacion=time(NULL);
+    tm=localtime(&(l.mbr_fecha_creacion));
+    //strftime(fecha, 50, "%d/%m/%Y", tm);
+    //strftime(hora, 50, "%H:%M:%S", tm);
+    printf("\n\n");
+    printf("\nTAMANIO DISCO: %d bytes\n", l.mbr_tamanio);
+    printf("NOMBRE DISCO %s\n", l.nombre);
+    printf("\n\n");
+    printf("TAMANIO PARTICION_1 %d byte\n", l.mbr_partition_1.part_size);
+    printf("NOMBRE PARTICION_1 %s\n", l.mbr_partition_1.part_name);
+    printf("INICIO PARTICION_1 %d\n", l.mbr_partition_1.part_start);
+    printf("TIPO PARTICION_1 %c\n", l.mbr_partition_1.part_type);
+    printf("STATUS PARTICION_1 %c\n", l.mbr_partition_1.part_status);
+    printf("AJUSTE PARTICION_1 %c\n", l.mbr_partition_1.part_fit);
+    printf("\n\n");
+    printf("TAMANIO PARTICION_2 %d byte\n", l.mbr_partition_2.part_size);
+    printf("NOMBRE PARTICION_2 %s\n", l.mbr_partition_2.part_name);
+    printf("INICIO PARTICION_2 %d\n", l.mbr_partition_2.part_start);
+    printf("TIPO PARTICION_2 %c\n", l.mbr_partition_2.part_type);
+    printf("STATUS PARTICION_2 %c\n", l.mbr_partition_2.part_status);
+    printf("AJUSTE PARTICION_2 %c\n", l.mbr_partition_2.part_fit);
+    //printf ("Fecha creacion: %s\n", fecha);
+    //printf ("Hora de creacion: %s\n", hora);
+    fclose(f);
 
 }
 
-/*
+
+void montar_disco()
+{
+
+}
+
+
+void desmontar_disco()
+{
+
+}
+
+
 struct numero
 {
     int num1;
@@ -425,57 +540,129 @@ struct otro
 {
     char cadena[12];
 };
-*/
 
+void validar(char comando_entrada[])
+{
+    int columna=0;
+    int estado_actual=0;
+
+
+    while(bandera_fin != 1)
+    {
+        switch (estado_actual) {
+
+        case 0:
+            //validando la palabra reservada para pasar a otro estado
+            if(comando_entrada[columna]=='m' || comando_entrada[columna]=='M' &&
+                    comando_entrada[columna+1]=='k' || comando_entrada[columna]=='K' &&
+                    comando_entrada[columna+2]=='d' || comando_entrada[columna]=='D' &&
+                    comando_entrada[columna+3]=='i' || comando_entrada[columna]=='I' &&
+                    comando_entrada[columna+4]=='s' || comando_entrada[columna]=='S' &&
+                    comando_entrada[columna+5]=='k' || comando_entrada[columna]=='K' )
+            {
+            estado_actual+=1;
+            columna = columna +6;
+            }
+
+            else if(comando_entrada[columna]=='c' || comando_entrada[columna]=='C' &&
+                    comando_entrada[columna]=='c' || comando_entrada[columna]=='C')
+            {
+
+                columna +=2;
+                columna +=1;
+                bandera_fin=1;
+            }
+
+            break;
+
+        case 1:
+
+
+            break;
+
+        case 2:
+
+            break;
+
+        case 3:
+
+            break;
+
+        case 4:
+
+            break;
+
+        case 5:
+
+            break;
+
+        case 6:
+
+            break;
+
+        case 7:
+
+            break;
+
+        case 8:
+
+            break;
+
+        default:
+            printf("Nose encontro el comando de entrada...!!");
+            break;
+        }
+
+    }//fin del while que recorre todos los caracteres
+}
 
 
 // inicio
 int main()
 {
 
-    /*struct numero num; 12 byte
-    struct caracteres carar; 36 byte
-    struct otro o; 12 byte
-    struct struc_disco tdisco;
 
+/*struct numero num;
+struct caracteres carar;
+struct otro o;
 
     FILE *f = fopen ("/home/jonatan/disco.dsk", "w+b");
 
-
-    for(ifor=0;ifor<10;ifor++)
+    rewind(f);
+    //for(ifor=0;ifor<10;ifor++)
         fwrite (&num, sizeof(num), 1, f);
-        120+360+120=600bytes
+        //120+360+120=600bytes
 
 
-    for(ifor=0;ifor<10;ifor++)
-        fwrite (&carar, sizeof(carar), 1, f);
+    //for(ifor=0;ifor<10;ifor++)
+        //fwrite (&carar, sizeof(carar), 1, f);
 
-    for(ifor=0;ifor<10;ifor++)
+    //for(ifor=0;ifor<10;ifor++)
         fwrite (&o, sizeof(o), 1, f);
 
     //guardando informacion del disco
-    rewind(f);
-    fwrite(&tdisco,sizeof(tdisco),1,f);
+
+    //fwrite(&tdisco,sizeof(tdisco),1,f);
+
     fclose(f);
 
-    STRUC1 12
-    STRUC2 24
-   ==> STRUC3 36
 
-    f = fopen ("/home/jonatan/disco.dsk", "rb+");
-    fseek(f,3*sizeof(num), SEEK_SET);
+
+    f = fopen ("/home/jonatan/disco.dsk", "w+b");
+    fseek(f,sizeof(num), SEEK_SET);
     //sprintf(num,num,"jose")
-    num.num1=1;
-    num.num2=2;
-    num.num3=3;
-    fwrite(&num,sizeof(num),1,f);
+    printf("ingrese una frase\n");
+    char nombre[12];
+    scanf("%s",&nombre);
+    sprintf(o.cadena,nombre);
+    fwrite(&o,sizeof(o),1,f);
     fclose(f);
 
     f = fopen ("/home/jonatan/disco.dsk", "rb+");
-    fseek(f,3*sizeof(num), SEEK_SET);
-    struct numero n;
+    fseek(f,sizeof(num), SEEK_SET);
+    struct otro n;
     fread(&n, sizeof(n), 1,f);
-    printf("mi dato %d %d %d\n", n.num1, n.num2, n.num3);
+    printf("mi dato %s\n", n.cadena);
     fclose(f);*/
 
 
@@ -522,5 +709,16 @@ int main()
 
     menu();
     //system("mkdir /home/jonatan/hobbitelmashueco/");
+
+    while(output !='c')
+    {
+        printf("::>");
+        fgets(comando_entrada, 100, stdin);
+        //printf("%s", comando_entrada);
+        validar(comando_entrada);
+
+    }
+
+
     return 0;
 }
