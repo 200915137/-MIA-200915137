@@ -84,11 +84,15 @@ int numero_particiones_primarias;
 //Numero de particiones logicas
 int numero_particiones_logicas;
 //Esta variable es a la que se le va asignar cada comando que se va analizar
-char comando_entrada[100];
-//Un char para salir del sistema
-char output;
-//Esta es una bandera para que termine de validad los comandos
-int bandera_fin=0;
+//char comando_entrada[100];
+//Sale del ciclo para terminar la ejecucion
+int output=0;
+
+
+int bandera_size=0;
+int bandera_unit=0;
+int bandera_path=0;
+int bandera_name=0;
 
 //-----------------------------------------------------------------------
 
@@ -427,6 +431,7 @@ void ver()
     struct_mbr tem;
     fseek(f,0, SEEK_SET);
     if(l.mbr_partition_1.part_size==0){
+
         numero_particiones_primarias+=1;
         tem.mbr_tamanio=l.mbr_tamanio;
         tem.mbr_fecha_creacion=l.mbr_fecha_creacion;
@@ -462,6 +467,7 @@ void ver()
         tem.mbr_tamanio=l.mbr_tamanio;
         tem.mbr_fecha_creacion=l.mbr_fecha_creacion;
         sprintf(tem.nombre,l.nombre);
+        tem.mbr_partition_1=l.mbr_partition_1;
         tem.mbr_partition_2.part_fit='l';
         sprintf(tem.mbr_partition_2.part_name,"particion 2");
         tem.mbr_partition_2.part_size=12*1024*1024;
@@ -522,54 +528,54 @@ void desmontar_disco()
 }
 
 
-struct numero
-{
-    int num1;
-    int num2;
-    int num3;
-};
-
-struct caracteres
-{
-    char cadena[12];
-    char cadena2[12];
-    char cadena3[12];
-};
-
-struct otro
-{
-    char cadena[12];
-};
-
 void validar(char comando_entrada[])
 {
+
     int columna=0;
     int estado_actual=0;
+    char size[100]=" ";
+    char unit=' ';
+    char path [100];
+    char name[100];
+    char bandera=1;
+    //Esta es una bandera para que termine de validad los comandos
+    char bandera_fin=1;
 
 
-    while(bandera_fin != 1)
+    int t=strlen(comando_entrada);
+
+    while(bandera_fin != 0)
     {
         switch (estado_actual) {
-
+        //recorrer el vector para comparar cada posicion
         case 0:
             //validando la palabra reservada para pasar a otro estado
             if(comando_entrada[columna]=='m' || comando_entrada[columna]=='M' &&
-                    comando_entrada[columna+1]=='k' || comando_entrada[columna]=='K' &&
-                    comando_entrada[columna+2]=='d' || comando_entrada[columna]=='D' &&
-                    comando_entrada[columna+3]=='i' || comando_entrada[columna]=='I' &&
-                    comando_entrada[columna+4]=='s' || comando_entrada[columna]=='S' &&
-                    comando_entrada[columna+5]=='k' || comando_entrada[columna]=='K' )
+                    comando_entrada[columna+1]=='k' || comando_entrada[columna+1]=='K' &&
+                    comando_entrada[columna+2]=='d' || comando_entrada[columna+2]=='D' &&
+                    comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I' &&
+                    comando_entrada[columna+4]=='s' || comando_entrada[columna+4]=='S' &&
+                    comando_entrada[columna+5]=='k' || comando_entrada[columna+5]=='K' )
             {
-            estado_actual+=1;
-            columna = columna +6;
+
+                memset( size, '\0', strlen(size) );
+                memset( path, '\0', strlen(path) );
+                memset( name, '\0', strlen(name) );
+                unit='\0';
+
+                estado_actual=1;
+                columna = columna + 6;
+                bandera=1;
+
             }
 
             else if(comando_entrada[columna]=='c' || comando_entrada[columna]=='C' &&
-                    comando_entrada[columna]=='c' || comando_entrada[columna]=='C')
+                    comando_entrada[columna+1]=='c' || comando_entrada[columna+1]=='C')
             {
 
                 columna +=2;
                 columna +=1;
+                output = 1;
                 bandera_fin=1;
             }
 
@@ -577,10 +583,198 @@ void validar(char comando_entrada[])
 
         case 1:
 
+            if(comando_entrada[columna]==' ' || comando_entrada[columna]=='\\' ||comando_entrada[columna]=='\n')
+            {
+                //cuando encuentra espacio, barra inclinada o un salto de linea se queda en el mismo estado
+                estado_actual = 1;
+                columna++;
+
+            }
+            else if(comando_entrada[columna] == '-' &&
+                        comando_entrada[columna+1]=='s' || comando_entrada[columna+1]=='S' &&
+                        comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I' &&
+                        comando_entrada[columna+3]=='z' || comando_entrada[columna+3]=='Z' &&
+                        comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                        comando_entrada[columna+5]==':' &&
+                        comando_entrada[columna+6]==':')
+            {
+
+                estado_actual =1;
+                columna = columna + 7;
+
+                //reconocer el valor de size
+                int i = 0;
+                while(comando_entrada[columna] !=' ')
+                {
+                    if(comando_entrada[columna]=='0' || comando_entrada[columna]=='1'||comando_entrada[columna]=='2' || comando_entrada[columna]=='3' || comando_entrada[columna]=='4'|| comando_entrada[columna]=='5' | comando_entrada[columna]=='6' || comando_entrada[columna]=='7' || comando_entrada[columna]=='8' || comando_entrada[columna]=='9')
+                    {
+                        size[i] = comando_entrada[columna];
+                        i++;
+                        columna++;
+                    }
+                    if(comando_entrada[columna] =='\n'){
+                       break;
+                    }
+
+                }
+
+
+            }
+
+            else if (comando_entrada[columna] == '+' &&
+                     comando_entrada[columna+1]=='u' || comando_entrada[columna+1]=='U' &&
+                     comando_entrada[columna+2]=='n' || comando_entrada[columna+2]=='N' &&
+                     comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='N' &&
+                     comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T' &&
+                     comando_entrada[columna+5]==':' &&
+                     comando_entrada[columna+6]==':')
+            {
+                estado_actual=1;
+                columna=columna+7;
+
+                //reconoce el valor de unit
+
+                while (comando_entrada[columna] != ' ')
+                {
+
+                    if (comando_entrada[columna]== 'K' || comando_entrada[columna]== 'M' || comando_entrada[columna] == 'k' || comando_entrada[columna] == 'm') {
+                        unit = comando_entrada[columna];
+                        columna++;
+                    }
+                    else if(comando_entrada[columna]=='\n')
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        printf("Comando invalido, eliga M (Megabytes ) o  k(Kilobytes).\n");
+                        unit= '\0';
+
+                    }
+
+
+
+                }
+
+            }
+
+            else if(comando_entrada[columna] == '-' &&
+                                comando_entrada[columna+1]=='n' || comando_entrada[columna+1]=='N' &&
+                                comando_entrada[columna+2]=='a' || comando_entrada[columna+2]=='A' &&
+                                comando_entrada[columna+3]=='m' || comando_entrada[columna+3]=='M' &&
+                                comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                                comando_entrada[columna+5]==':' &&
+                                comando_entrada[columna+6]==':')
+                        {
+                            estado_actual = 1;
+                            columna=columna + 7;
+
+                            if (comando_entrada[columna] == '"') {
+
+                                columna++;
+                                int i = 0;
+
+                                while (comando_entrada[columna]!= '-') {
+
+                                    if (comando_entrada[columna] == '"') {
+                                        columna++;
+
+                                        if (name[i - 4] == '.' &&
+                                                (name[i- 3] == 'D' || name[i- 3] == 'd') &&
+                                                (name[i - 2] == 'S' || name[i - 2] == 's') &&
+                                                (name[i - 1] == 'K' || name[i - 1] == 'k')) {
+                                            break;
+
+                                        } else {
+                                            printf("Comando invalido debe de escribir el nombre del disco con extension .dsk.\n");
+                                            name[0] = '\0';
+                                            break;
+                                        }
+
+                                    }
+
+                                    name[i] = comando_entrada[columna];
+                                    i++;
+                                    columna++;
+                                }
+
+                            } else {
+                                //si no viene una comilla en el principio del nombre disco
+                                estado_actual = 100; //Estado de error
+                            }
+
+
+                        }
+
+            else if(comando_entrada[columna] == '-' &&
+                                comando_entrada[columna+1]=='p' || comando_entrada[columna+1]=='P' &&
+                                comando_entrada[columna+2]=='a' || comando_entrada[columna+2]=='A' &&
+                                comando_entrada[columna+3]=='t' || comando_entrada[columna+3]=='T' &&
+                                comando_entrada[columna+4]=='h' || comando_entrada[columna+4]=='H' &&
+                                comando_entrada[columna+5]==':' &&
+                                comando_entrada[columna+6]==':')
+                        {
+                            estado_actual=1;
+                            columna=columna+7;
+                            if (comando_entrada[columna] == '"') {
+                                columna++;
+                                int contador = 0;
+                                while (comando_entrada[columna] != '-') {
+                                    if (comando_entrada[columna] == '"') {
+                                        columna++;
+                                        break;
+                                    }
+                                    path[contador] = comando_entrada[columna];
+                                    contador++;
+                                    columna++;
+                                }
+                            } else {
+                                estado_actual = 100; //Estado de error
+                            }
+
+                        }
+
+
+            else
+            {
+                if (size[0] == '\0') {
+                    printf("Comando invalido debe de escribir el tamaño del disco.\n");
+                    bandera_fin = 0;
+                }
+                if (unit == '\0') {
+                    printf("No se especifico la unidad de tamaño, el disco se creara en Megabytes.\n");
+                    unit = 'M';
+                }
+                if (unit == '\0') {
+                    bandera_fin=0;
+                }
+                if (path[0] == '\0') {
+                    printf("Comando invalido debe de escribir el path de almacenamiento del disco.\n");
+                    bandera_fin= 0;
+                }
+
+                if (name[0] == '\0') {
+                    printf("Comando invalido debe de escribir el nombre del disco.\n");
+                    bandera_fin = 0;
+                }
+                if (bandera == 1) {
+                    printf("size: %s\n", size);
+                    printf("MB o B 2: %c\n", unit);
+                    printf("path: %s\n", path);
+                    printf("name: %s\n", name);
+                    bandera_fin=0;
+                }
+
+
+
+
+
+            }
 
             break;
 
         case 2:
+
 
             break;
 
@@ -608,6 +802,10 @@ void validar(char comando_entrada[])
 
             break;
 
+        case 100:
+
+            break;
+
         default:
             printf("Nose encontro el comando de entrada...!!");
             break;
@@ -615,6 +813,25 @@ void validar(char comando_entrada[])
 
     }//fin del while que recorre todos los caracteres
 }
+
+
+//Metodo limpiar vectores
+void vaciar_vector(char vector[]) {
+    int i = 0;
+    for (i = 0; i < strlen(vector); i++) {
+        vector[i] = ' ';
+    }
+}
+
+/*int esnumero(char num)
+{
+
+    if(num=='0' || num=='1'||num=='2' || num=='3' || num=='4'|| num=='5' | num=='6' || num=='7' || num=='8' || num=='9')
+    {
+        return 1;
+    }
+    return 0;
+}*/
 
 
 // inicio
@@ -707,17 +924,28 @@ struct otro o;
     printf("timer %d\n", sizeof(t));
     printf("tdisco %d\n", sizeof(info_disco));*/
 
-    menu();
+    //menu();
     //system("mkdir /home/jonatan/hobbitelmashueco/");
 
-    while(output !='c')
+
+    char comando_entrada[100];
+
+    while(output !=1)
     {
+    printf("  ****************************************************************************\n");
+    printf("  ********************* MANEJO E IMPLEMENTACION DE ARCHIVO *******************\n");
+    printf("  ****************************************************************************\n");
+    printf("  ********************Para salir ingrese el comando cc ***********************\n");
+    printf("  ****************************************************************************\n\n");
         printf("::>");
         fgets(comando_entrada, 100, stdin);
-        //printf("%s", comando_entrada);
+        //scanf("%s", &comando_entrada);
+        strcat(comando_entrada, " ");
         validar(comando_entrada);
 
     }
+
+    printf("\n\nSaliendo del sistema.....!!\n");
 
 
     return 0;
