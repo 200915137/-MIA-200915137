@@ -26,6 +26,7 @@
 //-----------------------------------------------------------------------
 
 
+
 //------------------------Area de estructuras----------------------------
 
 #pragma pack(push, 1)
@@ -88,11 +89,16 @@ int numero_particiones_logicas;
 //Sale del ciclo para terminar la ejecucion
 int output=0;
 
+//banderas para cada inicio de comando;
+int bandera_mkdisk=0;
+int bandera_rmdisk=0;
+int bandera_fdisk=0;
+int bandera_mount=0;
+int bandera_umount=0;
 
-int bandera_size=0;
-int bandera_unit=0;
-int bandera_path=0;
-int bandera_name=0;
+
+
+
 
 //-----------------------------------------------------------------------
 
@@ -535,11 +541,19 @@ void validar(char comando_entrada[])
     int estado_actual=0;
     char size[100]=" ";
     char unit=' ';
-    char path [100];
-    char name[100];
+    char path [100]=" ";
+    char name[100]=" ";
     char bandera=1;
     //Esta es una bandera para que termine de validad los comandos
     char bandera_fin=1;
+    char delete_[4]; // full/fast
+    char add[12]; //
+    char fit[2]; //WF BF/FF/WF
+    char type; //P     P E L
+
+
+
+
 
 
     int t=strlen(comando_entrada);
@@ -557,17 +571,95 @@ void validar(char comando_entrada[])
                     comando_entrada[columna+4]=='s' || comando_entrada[columna+4]=='S' &&
                     comando_entrada[columna+5]=='k' || comando_entrada[columna+5]=='K' )
             {
-
-                memset( size, '\0', strlen(size) );
-                memset( path, '\0', strlen(path) );
-                memset( name, '\0', strlen(name) );
+                //el memset limpia la cadena
+                vaciar_vector(size);;
+                vaciar_vector(path);;
+                vaciar_vector(name);
                 unit='\0';
+                vaciar_vector(fit);
+                type='\0';
+                vaciar_vector(delete_);
+                vaciar_vector(add);
 
+                bandera_mkdisk=1;
                 estado_actual=1;
                 columna = columna + 6;
                 bandera=1;
 
             }
+            else if(comando_entrada[columna]=='r' || comando_entrada[columna]=='R' &&
+                    comando_entrada[columna+1]=='m' || comando_entrada[columna+1]=='M' &&
+                    comando_entrada[columna+2]=='d' || comando_entrada[columna+2]=='D' &&
+                    comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I' &&
+                    comando_entrada[columna+4]=='s' || comando_entrada[columna+4]=='S' &&
+                    comando_entrada[columna+5]=='k' || comando_entrada[columna+5]=='K' )
+            {
+                //el memset limpia la cadena
+                vaciar_vector(size);;
+                vaciar_vector(path);;
+                vaciar_vector(name);
+                unit='\0';
+                vaciar_vector(fit);
+                type='\0';
+                vaciar_vector(delete_);
+                vaciar_vector(add);
+
+                bandera_rmdisk=1;
+                estado_actual=32;
+                columna=columna+6;
+
+
+            }
+
+            else if(comando_entrada[columna]=='f' || comando_entrada[columna]=='F' &&
+                    comando_entrada[columna+1]=='d' || comando_entrada[columna+1]=='D' &&
+                    comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I' &&
+                    comando_entrada[columna+3]=='s' || comando_entrada[columna+3]=='S' &&
+                    comando_entrada[columna+4]=='k' || comando_entrada[columna+4]=='K' )
+            {
+                //el memset limpia la cadena
+                vaciar_vector(size);;
+                vaciar_vector(path);;
+                vaciar_vector(name);
+                unit='\0';
+                vaciar_vector(fit);
+                type='\0';
+                vaciar_vector(delete_);
+                vaciar_vector(add);
+
+                bandera_fdisk=1;
+                estado_actual=12;
+                columna=columna+6;
+
+
+            }
+
+            else if(comando_entrada[columna]=='m' || comando_entrada[columna]=='M' &&
+                    comando_entrada[columna+1]=='o' || comando_entrada[columna+1]=='O' &&
+                    comando_entrada[columna+2]=='u' || comando_entrada[columna+2]=='U' &&
+                    comando_entrada[columna+3]=='n' || comando_entrada[columna+3]=='N' &&
+                    comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T' )
+            {
+
+                bandera_mount=1;
+                columna=columna+6;
+
+
+            }
+
+            else if(comando_entrada[columna]=='u' || comando_entrada[columna]=='U' &&
+                    comando_entrada[columna+1]=='m' || comando_entrada[columna+1]=='M' &&
+                    comando_entrada[columna+2]=='o' || comando_entrada[columna+2]=='O' &&
+                    comando_entrada[columna+3]=='u' || comando_entrada[columna+3]=='U' &&
+                    comando_entrada[columna+4]=='n' || comando_entrada[columna+4]=='N' &&
+                    comando_entrada[columna+5]=='t' || comando_entrada[columna+5]=='T' )
+            {
+
+                bandera_umount=1;
+                columna=columna+7;
+            }
+
+
 
             else if(comando_entrada[columna]=='c' || comando_entrada[columna]=='C' &&
                     comando_entrada[columna+1]=='c' || comando_entrada[columna+1]=='C')
@@ -578,6 +670,16 @@ void validar(char comando_entrada[])
                 output = 1;
                 bandera_fin=1;
             }
+
+            else if(comando_entrada[columna]=='#')
+            {
+                estado_actual=60;
+                columna++;
+
+            }
+            else
+                estado_actual=100; //Error
+                //printf("Comando invalido...!! Vuelva intentarlo..?\n");
 
             break;
 
@@ -612,19 +714,26 @@ void validar(char comando_entrada[])
                         i++;
                         columna++;
                     }
+                    else
                     if(comando_entrada[columna] =='\n'){
                        break;
                     }
 
-                }
+                    else
+                    {
+                        printf("Error...!! Ingrese solo numeros.....!!!\n\n");
+                        estado_actual=100;
+                        break;
+                    }
 
+                }
 
             }
 
             else if (comando_entrada[columna] == '+' &&
                      comando_entrada[columna+1]=='u' || comando_entrada[columna+1]=='U' &&
                      comando_entrada[columna+2]=='n' || comando_entrada[columna+2]=='N' &&
-                     comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='N' &&
+                     comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I' &&
                      comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T' &&
                      comando_entrada[columna+5]==':' &&
                      comando_entrada[columna+6]==':')
@@ -647,8 +756,11 @@ void validar(char comando_entrada[])
                     }
                     else
                     {
-                        printf("Comando invalido, eliga M (Megabytes ) o  k(Kilobytes).\n");
+                        printf("Error...!! Ingrese M ó K en mayuscula o minuscula .....!!!\n\n");
+                        estado_actual=100;
                         unit= '\0';
+                        break;
+
 
                     }
 
@@ -659,52 +771,56 @@ void validar(char comando_entrada[])
             }
 
             else if(comando_entrada[columna] == '-' &&
-                                comando_entrada[columna+1]=='n' || comando_entrada[columna+1]=='N' &&
-                                comando_entrada[columna+2]=='a' || comando_entrada[columna+2]=='A' &&
-                                comando_entrada[columna+3]=='m' || comando_entrada[columna+3]=='M' &&
-                                comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
-                                comando_entrada[columna+5]==':' &&
-                                comando_entrada[columna+6]==':')
-                        {
-                            estado_actual = 1;
-                            columna=columna + 7;
+                    comando_entrada[columna+1]=='n' || comando_entrada[columna+1]=='N' &&
+                    comando_entrada[columna+2]=='a' || comando_entrada[columna+2]=='A' &&
+                    comando_entrada[columna+3]=='m' || comando_entrada[columna+3]=='M' &&
+                    comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                    comando_entrada[columna+5]==':' &&
+                    comando_entrada[columna+6]==':')
+            {
+                estado_actual = 1;
+                columna=columna + 7;
 
-                            if (comando_entrada[columna] == '"') {
+                if (comando_entrada[columna] == '"')
+                {
 
-                                columna++;
-                                int i = 0;
+                    columna++;
+                    int i = 0;
 
-                                while (comando_entrada[columna]!= '-') {
+                    while (comando_entrada[columna]!= '-') {
 
-                                    if (comando_entrada[columna] == '"') {
-                                        columna++;
+                        if (comando_entrada[columna] == '"') {
+                            columna++;
 
-                                        if (name[i - 4] == '.' &&
-                                                (name[i- 3] == 'D' || name[i- 3] == 'd') &&
-                                                (name[i - 2] == 'S' || name[i - 2] == 's') &&
-                                                (name[i - 1] == 'K' || name[i - 1] == 'k')) {
-                                            break;
-
-                                        } else {
-                                            printf("Comando invalido debe de escribir el nombre del disco con extension .dsk.\n");
-                                            name[0] = '\0';
-                                            break;
-                                        }
-
-                                    }
-
-                                    name[i] = comando_entrada[columna];
-                                    i++;
-                                    columna++;
-                                }
+                            if (name[i - 4] == '.' &&
+                                    (name[i- 3] == 'D' || name[i- 3] == 'd') &&
+                                    (name[i - 2] == 'S' || name[i - 2] == 's') &&
+                                    (name[i - 1] == 'K' || name[i - 1] == 'k')) {
+                                break;
 
                             } else {
-                                //si no viene una comilla en el principio del nombre disco
-                                estado_actual = 100; //Estado de error
+                                estado_actual=100;
+                                printf("Error...!! Escriba el nombre con extension (.dsk)...\n");
+                                name[0] = '\0';
+                                break;
                             }
 
-
                         }
+
+                        name[i] = comando_entrada[columna];
+                        i++;
+                        columna++;
+                    }
+
+                } else {
+                    //si no viene una comilla en el principio del nombre disco
+                    estado_actual = 100; //Error
+                    printf("Error...!! Debe agregar las comillas dobles el inicio y al final...!!!");
+                }
+
+
+            }
+
 
             else if(comando_entrada[columna] == '-' &&
                                 comando_entrada[columna+1]=='p' || comando_entrada[columna+1]=='P' &&
@@ -737,34 +853,39 @@ void validar(char comando_entrada[])
 
             else
             {
+
+
                 if (size[0] == '\0') {
-                    printf("Comando invalido debe de escribir el tamaño del disco.\n");
+                    printf("¡Importante...! Debe ingresar el tamanio del disco.\n");
                     bandera_fin = 0;
                 }
                 if (unit == '\0') {
-                    printf("No se especifico la unidad de tamaño, el disco se creara en Megabytes.\n");
+                    printf("¡Importante...! Si no ingreso el valor de =unit:: se toma por defaul M.\n");
                     unit = 'M';
                 }
-                if (unit == '\0') {
-                    bandera_fin=0;
-                }
+
                 if (path[0] == '\0') {
-                    printf("Comando invalido debe de escribir el path de almacenamiento del disco.\n");
+                    printf("Importante...! escribe el nombre en comillas dobles.\n");
                     bandera_fin= 0;
                 }
 
                 if (name[0] == '\0') {
-                    printf("Comando invalido debe de escribir el nombre del disco.\n");
+                    printf("Importante...! escribe el nombre y la extension en comiilas dobles.\n");
                     bandera_fin = 0;
                 }
-                if (bandera == 1) {
-                    printf("size: %s\n", size);
-                    printf("MB o B 2: %c\n", unit);
-                    printf("path: %s\n", path);
-                    printf("name: %s\n", name);
-                    bandera_fin=0;
-                }
 
+                if(bandera_fin==1){
+                    if (bandera_mkdisk== 1)
+                    {
+                        printf("size: %s\n", size);
+                        printf("MB o B 2: %c\n", unit);
+                        printf("path: %s\n", path);
+                        printf("name: %s\n", name);
+                        bandera_mkdisk=0;
+                        bandera_fin=0;
+                    }
+
+                }
 
 
 
@@ -798,45 +919,504 @@ void validar(char comando_entrada[])
 
             break;
 
-        case 8:
+        case 12:
+
+            if(comando_entrada[columna]==' ' || comando_entrada[columna]=='\\' ||comando_entrada[columna]=='\n')
+            {
+                //cuando encuentra espacio, barra inclinada o un salto de linea se queda en el mismo estado
+                estado_actual = 12;
+                columna++;
+
+            }
+
+            else if(comando_entrada[columna] == '-' &&
+                        comando_entrada[columna+1]=='s' || comando_entrada[columna+1]=='S' &&
+                        comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I' &&
+                        comando_entrada[columna+3]=='z' || comando_entrada[columna+3]=='Z' &&
+                        comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                        comando_entrada[columna+5]==':' &&
+                        comando_entrada[columna+6]==':')
+            {
+
+                estado_actual =12;
+                columna = columna + 7;
+
+                //reconocer el valor de size
+                int i = 0;
+                while(comando_entrada[columna] !=' ')
+                {
+                    if(comando_entrada[columna]=='0' || comando_entrada[columna]=='1'||comando_entrada[columna]=='2' || comando_entrada[columna]=='3' || comando_entrada[columna]=='4'|| comando_entrada[columna]=='5' | comando_entrada[columna]=='6' || comando_entrada[columna]=='7' || comando_entrada[columna]=='8' || comando_entrada[columna]=='9')
+                    {
+                        size[i] = comando_entrada[columna];
+                        i++;
+                        columna++;
+                    }
+                    else
+                    if(comando_entrada[columna] =='\n'){
+                       break;
+                    }
+
+                    else
+                    {
+                        printf("Error...!! Ingrese solo numeros.....!!!\n\n");
+                        estado_actual=100;
+                        break;
+                    }
+
+                }
+
+            }
+
+
+            else if(comando_entrada[columna] == '-' &&
+                    comando_entrada[columna+1]=='p' || comando_entrada[columna+1]=='P' &&
+                    comando_entrada[columna+2]=='a' || comando_entrada[columna+2]=='A' &&
+                    comando_entrada[columna+3]=='t' || comando_entrada[columna+3]=='T' &&
+                    comando_entrada[columna+4]=='h' || comando_entrada[columna+4]=='H' &&
+                    comando_entrada[columna+5]==':' &&
+                    comando_entrada[columna+6]==':')
+            {
+                estado_actual=12;
+                columna=columna+7;
+                if (comando_entrada[columna] == '"') {
+                    columna++;
+                    int contador = 0;
+                    while (comando_entrada[columna] != '-') {
+                        if (comando_entrada[columna] == '"') {
+                            columna++;
+                            break;
+                        }
+                        path[contador] = comando_entrada[columna];
+                        contador++;
+                        columna++;
+                    }
+                } else {
+                    estado_actual = 100; //Estado de error
+                }
+
+            }
+
+            else if (comando_entrada[columna] == '+' &&
+                     comando_entrada[columna+1]=='u' || comando_entrada[columna+1]=='U' &&
+                     comando_entrada[columna+2]=='n' || comando_entrada[columna+2]=='N' &&
+                     comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I' &&
+                     comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T' &&
+                     comando_entrada[columna+5]==':' &&
+                     comando_entrada[columna+6]==':')
+            {
+                estado_actual=12;
+                columna=columna+7;
+
+                //reconoce el valor de unit
+
+                while (comando_entrada[columna] != ' ')
+                {
+
+                    if (comando_entrada[columna]== 'K' || comando_entrada[columna]== 'M' || comando_entrada[columna] == 'k' || comando_entrada[columna] == 'm' || comando_entrada[columna] == 'b' || comando_entrada[columna] == 'B') {
+                        unit = comando_entrada[columna];
+                        columna++;
+                    }
+                    else if(comando_entrada[columna]=='\n')
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        printf("Error...!! Ingrese M ó K ó B  en mayuscula o minuscula .....!!!\n\n");
+                        estado_actual=100;
+                        unit= '\0';
+                        break;
+
+                    }
+
+                }
+
+            }
+
+            else if(comando_entrada[columna] == '+' &&
+                    comando_entrada[columna+1]=='t' || comando_entrada[columna+1]=='T' &&
+                    comando_entrada[columna+2]=='y' || comando_entrada[columna+2]=='Y' &&
+                    comando_entrada[columna+3]=='p' || comando_entrada[columna+3]=='P' &&
+                    comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                    comando_entrada[columna+5]==':' &&
+                    comando_entrada[columna+6]==':')
+            {
+                estado_actual =12;
+                columna=columna+7;
+
+                while (comando_entrada[columna] != ' ')
+                {
+
+                    if (comando_entrada[columna]== 'p' || comando_entrada[columna]== 'P' || comando_entrada[columna] == 'l' || comando_entrada[columna] == 'L' || comando_entrada[columna] == 'e' || comando_entrada[columna] == 'E') {
+                        unit = comando_entrada[columna];
+                        columna++;
+                    }
+                    else if(comando_entrada[columna]=='\n')
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        printf("Error...!! Ingrese P ó L ó E en mayuscula o minuscula .....!!!\n\n");
+                        estado_actual=100;
+                        break;
+
+                    }
+
+                }
+
+
+            }
+
+            else if(comando_entrada[columna] == '+' &&
+                    comando_entrada[columna+1]=='f' || comando_entrada[columna+1]=='F' &&
+                    comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I' &&
+                    comando_entrada[columna+3]=='t' || comando_entrada[columna+3]=='T' &&
+                    comando_entrada[columna+4]==':' &&
+                    comando_entrada[columna+5]==':')
+
+            {
+                estado_actual=12;
+                columna=columna+6;
+
+                int contador = 0;
+
+                while (comando_entrada[columna]!= '\0') {
+                    if (comando_entrada[columna] == '-' || comando_entrada[columna]== ' ') {
+                        if (((fit[0] == 'B' || fit[0] == 'b') && (fit[1] == 'F' || fit[1] == 'f')) || ((fit[0] == 'F' || fit[0] == 'f') && (fit[1] == 'F' || fit[1] == 'f')) || ((fit[0] == 'W' || fit[0] == 'w') && (fit[1] == 'F' || fit[1] == 'f'))) {
+                            break;
+                        } else {
+                            printf("Comando invalido, los tipos de ajustes deben ser: Mejor Ajuste (BF) o Primer Ajuste (FF) o Pero Ajuste (WF).\n");
+                            fit[0] = '\0';
+                            break;
+                        }
+                    }
+                    fit[contador] = comando_entrada[columna];
+                    contador++;
+                    columna++;
+                }
+
+
+
+            }
+
+            else if(comando_entrada[columna] == '+' &&
+                    comando_entrada[columna+1]=='d' || comando_entrada[columna+1]=='D' &&
+                    comando_entrada[columna+2]=='e' || comando_entrada[columna+2]=='E' &&
+                    comando_entrada[columna+3]=='l' || comando_entrada[columna+3]=='L' &&
+                    comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                    comando_entrada[columna+5]=='t' || comando_entrada[columna+5]=='T' &&
+                    comando_entrada[columna+6]=='e' || comando_entrada[columna+6]=='E' &&
+                    comando_entrada[columna+7]==':' &&
+                    comando_entrada[columna+8]==':')
+
+            {
+                estado_actual=12;
+                columna=columna+9;
+                int contador = 0;
+
+                while (comando_entrada[columna] != ' ') {
+                    if (comando_entrada[columna]== '-' || comando_entrada[columna] == ' ') {
+
+                        if (((delete_[0] == 'F' || delete_[0] == 'f') &&
+                             (delete_[1] == 'U' || delete_[1] == 'u') &&
+                             (delete_[2] == 'L' || delete_[2] == 'l') &&
+                             (delete_[3] == 'L' || delete_[3] == 'l')) ||
+                            ((delete_[0] == 'F' || delete_[0] == 'f') &&
+                             (delete_[1] == 'A' || delete_[1] == 'a') &&
+                             (delete_[2] == 'S' || delete_[2] == 's') &&
+                             (delete_[3] == 'T' || delete_[3] == 't')))
+                        {
+                            break;
+
+                        }
+                        else
+                        {
+                            printf("Comando invalido,  full o fast.\n");
+                            delete_[0] = '\0';
+                            break;
+                        }
+                    }
+                    if(comando_entrada[columna]=='\n')
+                        break;
+
+                    if(comando_entrada[columna]!='\n')
+                    {
+                        delete_[contador] = comando_entrada[columna];
+                        contador++;
+                        columna++;
+                    }
+
+
+                }
+
+
+            }
+
+            else if(comando_entrada[columna] == '-' &&
+                    comando_entrada[columna+1]=='n' || comando_entrada[columna+1]=='N' &&
+                    comando_entrada[columna+2]=='a' || comando_entrada[columna+2]=='A' &&
+                    comando_entrada[columna+3]=='m' || comando_entrada[columna+3]=='M' &&
+                    comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                    comando_entrada[columna+5]==':' &&
+                    comando_entrada[columna+6]==':')
+            {
+
+                estado_actual = 12;
+                columna=columna + 7;
+
+                if (comando_entrada[columna]== '"') {
+
+                    columna++;
+                    int contador = 0;
+                    while (comando_entrada[columna]!= '-') {
+                        if (comando_entrada[columna] == '"') {
+                            columna++;
+                            break;
+                        }
+                        name[contador] = comando_entrada[columna];
+                        contador++;
+                        columna++;
+                    }
+                } else {
+                    estado_actual = 100; //Error
+                }
+
+
+            }
+
+            else
+            {
+                if (size[0] == '\0') {
+                    printf("¡Importante...! Debe ingresar el tamanio del particion.\n");
+                    bandera_fin = 0;
+                }
+                if (unit == '\0') {
+                    printf("¡Importante...! Si no ingreso el valor de +unit:: se toma por defaul k.\n");
+                    unit = 'K';
+                }
+
+                if (path[0] == '\0') {
+                    printf("Importante...! escribe el nombre en comillas dobles.\n");
+                    bandera_fin= 0;
+                }
+
+                if(type=='\0'){
+                    printf("¡Importante...!  Si no ingreso el valor de +type:: se toma por defaul P.\n");
+                    type='P';
+                }
+
+                if (name[0] == '\0') {
+                    printf("¡Importante...!  escribe el nombre entre las comiilas dobles.\n");
+                    bandera_fin = 0;
+                }
+
+                if(delete_=='\0')
+                {
+                    //printf("Importante...! Si no ingreso el valor de +type:: se toma por defaul P.\n");
+                    //type='P';
+
+                }
+                if(add=='\0')
+                {
+
+                }
+                if(fit=='\0')
+                {
+                    printf("¡Importante...! no se escribio el comando +fit se ingreso por defecto el valor WF.\n");
+                    fit[0]='W';
+                    fit[1]='F';
+                }
+
+                if(bandera_fin==1){
+                    if (bandera_fdisk== 1)
+                    {
+                        printf("size: %s\n", size);
+                        printf("unit: %c\n", unit);
+                        printf("path: %s\n", path);
+                        printf("name: %s\n", name);
+                        printf("delete: %s\n", delete_);
+                        printf("fit: %s\n", fit);
+                        bandera_fdisk=0;
+                        bandera_fin=0;
+                    }
+
+                }
+
+
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+            break;
+
+        case 32:
+            if(comando_entrada[columna]==' ' || comando_entrada[columna]=='\\' ||comando_entrada[columna]=='\n')
+            {
+                //cuando encuentra espacio, barra inclinada o un salto de linea se queda en el mismo estado
+                estado_actual = 32;
+                columna++;
+
+            }
+
+            else if(comando_entrada[columna] == '-' &&
+                    comando_entrada[columna+1]=='p' || comando_entrada[columna+1]=='P' &&
+                    comando_entrada[columna+2]=='a' || comando_entrada[columna+2]=='A' &&
+                    comando_entrada[columna+3]=='t' || comando_entrada[columna+3]=='T' &&
+                    comando_entrada[columna+4]=='h' || comando_entrada[columna+4]=='H' &&
+                    comando_entrada[columna+5]==':' &&
+                    comando_entrada[columna+6]==':')
+            {
+                estado_actual=32;
+                columna=columna+7;
+                if (comando_entrada[columna] == '"') {
+                    columna++;
+                    int contador = 0;
+                    while (comando_entrada[columna] != '-') {
+                        if (comando_entrada[columna] == '"') {
+                            columna++;
+                            break;
+                        }
+                        path[contador] = comando_entrada[columna];
+                        contador++;
+                        columna++;
+                    }
+                } else {
+                    estado_actual = 100; //Estado de error
+                }
+
+            }
+
+            else
+            {
+                if (path[0] == '\0') {
+                    printf("Importante...! escriba -path:: seguido de la ruta o directorio .\n");
+                    bandera_fin= 0;
+                }
+
+                if(bandera_fin==1)
+                {
+                    if(bandera_rmdisk==1)
+                    {
+                        printf("path para eliminar: %s\n", path);
+                        bandera_rmdisk=0;
+                        bandera_fin=0;
+                    }
+
+                }
+
+
+            }
+
+            break;
+
+        case 60:
+
+
+            if (comando_entrada[columna] == 'a' ||comando_entrada[columna] == 'b' ||comando_entrada[columna] == 'c' ||comando_entrada[columna] == 'd' ||comando_entrada[columna] == 'e'
+                    ||comando_entrada[columna] == 'f' ||comando_entrada[columna] == 'g' ||comando_entrada[columna] == 'h' ||comando_entrada[columna] == 'i' ||comando_entrada[columna] == 'j'
+                    ||comando_entrada[columna] == 'k' ||comando_entrada[columna] == 'l' ||comando_entrada[columna] == 'm' ||comando_entrada[columna] == 'n' ||comando_entrada[columna] == 'o'
+                    ||comando_entrada[columna] == 'p' ||comando_entrada[columna] == 'q' ||comando_entrada[columna] == 'r' ||comando_entrada[columna] == 's' ||comando_entrada[columna] == 't'
+                    ||comando_entrada[columna] == 'u' ||comando_entrada[columna] == 'v' ||comando_entrada[columna] == 'w' ||comando_entrada[columna] == 'x' ||comando_entrada[columna] == 'y'
+                    ||comando_entrada[columna] == 'z' ||comando_entrada[columna] == 'A' ||comando_entrada[columna] == 'B' ||comando_entrada[columna] == 'C' ||comando_entrada[columna] == 'D'
+                    ||comando_entrada[columna] == 'E' ||comando_entrada[columna] == 'F' ||comando_entrada[columna] == 'G' ||comando_entrada[columna] == 'H' ||comando_entrada[columna] == 'I'
+                    ||comando_entrada[columna] == 'J' ||comando_entrada[columna] == 'K' ||comando_entrada[columna] == 'L' ||comando_entrada[columna] == 'M' ||comando_entrada[columna] == 'N'
+                    ||comando_entrada[columna] == 'O' ||comando_entrada[columna] == 'P' ||comando_entrada[columna] == 'Q' ||comando_entrada[columna] == 'R' ||comando_entrada[columna] == 'S'
+                    ||comando_entrada[columna] == 'T' ||comando_entrada[columna] == 'U' ||comando_entrada[columna] == 'V' ||comando_entrada[columna] == 'W' ||comando_entrada[columna] == 'X'
+                    ||comando_entrada[columna] == 'Y' ||comando_entrada[columna] == 'Z' ||comando_entrada[columna] == '0' ||comando_entrada[columna] == '1' ||comando_entrada[columna] == '2'
+                    ||comando_entrada[columna] == '3' ||comando_entrada[columna] == '4' ||comando_entrada[columna] == '5' ||comando_entrada[columna] == '6' ||comando_entrada[columna] == '7'
+                    ||comando_entrada[columna] == '8' ||comando_entrada[columna] == '9' ||comando_entrada[columna] == '_' ||comando_entrada[columna] == '°' ||comando_entrada[columna] == '|'
+                    ||comando_entrada[columna] == '¬' ||comando_entrada[columna] == '!' ||comando_entrada[columna] == '"' ||comando_entrada[columna] == '#' ||comando_entrada[columna] == '$'
+                    ||comando_entrada[columna] == '%' ||comando_entrada[columna] == '&' ||comando_entrada[columna] == '/' ||comando_entrada[columna] == '(' ||comando_entrada[columna] == ')'
+                    ||comando_entrada[columna] == '?' ||comando_entrada[columna] == '\\' ||comando_entrada[columna] == '¡' ||comando_entrada[columna] == '¿' ||comando_entrada[columna] == '´'
+                    ||comando_entrada[columna] == '+' ||comando_entrada[columna] == '*' ||comando_entrada[columna] == '~' ||comando_entrada[columna] == '{' ||comando_entrada[columna] == '}'
+                    ||comando_entrada[columna] == '[' ||comando_entrada[columna] == ']' ||comando_entrada[columna] == '_' ||comando_entrada[columna] == '-' ||comando_entrada[columna] == ':'
+                    ||comando_entrada[columna] == '.' ||comando_entrada[columna] == ',' ||comando_entrada[columna] == ';' ||comando_entrada[columna] == ' ' ||comando_entrada[columna] == 'á'
+                    ||comando_entrada[columna] == 'é' ||comando_entrada[columna] == 'í' ||comando_entrada[columna] == 'ó' ||comando_entrada[columna] == 'ú' ||comando_entrada[columna] == 'Á'
+                    ||comando_entrada[columna] == 'É' ||comando_entrada[columna] == 'Í' ||comando_entrada[columna] == 'Ó' ||comando_entrada[columna] == 'Ú')
+            {
+
+                estado_actual = 60;
+                columna++;
+
+            }
+
+            else if (comando_entrada[columna] == '\n')
+            {
+                printf("Escribe un comando valido...\n");
+                bandera_fin = 0;
+            }
+
+
 
             break;
 
         case 100:
 
+            bandera_fin=0;
+
             break;
 
         default:
             printf("Nose encontro el comando de entrada...!!");
+            bandera_fin=0;
             break;
         }
 
     }//fin del while que recorre todos los caracteres
 }
 
-
-//Metodo limpiar vectores
+//Metodo para limpiar variables
 void vaciar_vector(char vector[]) {
-    int i = 0;
-    for (i = 0; i < strlen(vector); i++) {
-        vector[i] = ' ';
-    }
+    int x;
+    for (x = 0; x < strlen(vector); x++)
+        vector[x] = ' ';
 }
 
-/*int esnumero(char num)
-{
-
-    if(num=='0' || num=='1'||num=='2' || num=='3' || num=='4'|| num=='5' | num=='6' || num=='7' || num=='8' || num=='9')
-    {
-        return 1;
-    }
-    return 0;
-}*/
 
 
-// inicio
+
+// inicio principal
 int main()
 {
+
+    char comando_entrada[100];
+
+    printf("  ****************************************************************************\n");
+    printf("  ********************* MANEJO E IMPLEMENTACION DE ARCHIVO *******************\n");
+    printf("  ****************************************************************************\n");
+    printf("  ****************************************************************************\n");
+    printf("  ********************Para salir ingrese el comando cc ***********************\n");
+    printf("  ****************************************************************************\n\n");
+
+    while(output !=1)
+    {
+
+        printf("::>");
+        fgets(comando_entrada, 100, stdin);
+        //scanf("%s", &comando_entrada);
+        strcat(comando_entrada, " ");
+        validar(comando_entrada);
+
+
+    }
+
+    printf("\n\nSaliendo del sistema.....!!\n");
+
+
+    return 0;
+}
+
+
 
 
 /*struct numero num;
@@ -926,27 +1506,3 @@ struct otro o;
 
     //menu();
     //system("mkdir /home/jonatan/hobbitelmashueco/");
-
-
-    char comando_entrada[100];
-
-    while(output !=1)
-    {
-    printf("  ****************************************************************************\n");
-    printf("  ********************* MANEJO E IMPLEMENTACION DE ARCHIVO *******************\n");
-    printf("  ****************************************************************************\n");
-    printf("  ********************Para salir ingrese el comando cc ***********************\n");
-    printf("  ****************************************************************************\n\n");
-        printf("::>");
-        fgets(comando_entrada, 100, stdin);
-        //scanf("%s", &comando_entrada);
-        strcat(comando_entrada, " ");
-        validar(comando_entrada);
-
-    }
-
-    printf("\n\nSaliendo del sistema.....!!\n");
-
-
-    return 0;
-}
