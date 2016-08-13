@@ -31,12 +31,12 @@
 
 #pragma pack(push, 1)
 
-//tamanio 27 bytes
+//tamanio 28 bytes
 typedef struct partition
 {
     char part_status; /*Indica si la particion esta activa o no*/
     char part_type; /*Indica el tipo de particion, primaria(P) o extendida (E)*/
-    char part_fit; /*Tipo de ajuste de la particion { BF(best) FF(First) WF(worst)}*/
+    char part_fit[2]; /*Tipo de ajuste de la particion { BF(best) FF(First) WF(worst)}*/
     int part_start; /*Indica en que byte del disco inicia la particion*/
     int part_size; /*Contiene el total de la particion en byte*/
     char part_name[16]; /*Nombre de la partcion*/
@@ -95,9 +95,12 @@ int bandera_rmdisk=0;
 int bandera_fdisk=0;
 int bandera_mount=0;
 int bandera_umount=0;
-
-
-
+int bandera_name=0;
+int bandera_path=0;
+int bandera_unit=0;
+int bandera_exec=0;
+int bandera_comentario=0;
+int contador_asignature=1;
 
 
 //-----------------------------------------------------------------------
@@ -111,137 +114,195 @@ void set_disco(char ruta_carpeta[52],char nombre[52])
 
 }
 
-void menu()
-{
-   int opciones;
-    do{
-        printf("MENU PRINCIPAL\n\n");
-        printf("1. Crear disco\n");
-        printf("2. Eliminar Disco\n");
-        printf("3. crear particion\n");
-        printf("4. Desmontar\n");
-        printf("5. Salir\n");
-        printf("Elija opcion: ");
-        scanf("%d", &opciones);
-        switch(opciones)
-        {
-            case 1:
-                crear_disco();
-            break;
-            case 2:
-                eliminar_disco();
-            break;
-            case 3:
-                crear_particion();
-            break;
-            case 4:
-                ver();
-            break;
-            case 5:
-            break;
-            default:
-            printf("Error opcion incorrecta\n\n");
-            break;
-        }
-    }while(opciones != 5);
-
-}
-
-//metodo par crear discos
-void crear_disco(){
-
-    struct_mbr infodisco;
-    char ruta[52];
-    int opt=0;
-    //datos que se se ingresa
-    printf("Ingresar el nombre del disco. \n");
-    scanf("%s", infodisco.nombre);
-    printf("\n");
-    printf("1. En Kilobytes\n");
-    printf("2. En MegaBytes\n");
-    printf("3. Por default\n");
-    printf("Elija si es en megas o en kilo\n");
-    scanf("%d",&opt);
-    printf("ingrese el tamanio del disco\n");
 
 
-    int tamanio=0;
-    int repetir=0;
+void archivo_masivo(char ruta[]) {
 
-    while(repetir==0)
+
+    char caracter=' ';
+    char comando_ejecutar[200] = " ";
+    int bandera = 0;
+    int contador = 0;
+    vaciar_vector(comando_ejecutar);
+    FILE * f;
+    f = fopen(ruta, "r");
+    if (f == NULL)
+        printf("\nError al abrir el archivo... \n\n");
+    else
     {
-        if(scanf("%d",&tamanio)==0)
-        {
-            while(getchar() != '\n')
+        while (feof(f) == 0) {
+
+            caracter = fgetc(f); //se lee caracter por caracter el archivo
+
+            if(caracter!='\n')
             {
-                printf("Error...!! Asigne el tamanio...");
-                scanf("%d",&tamanio);
+
+                comando_ejecutar[contador] = caracter; //se agrega a un arreglo de chars
+                contador++;
+
             }
+            else
+            {
+                if (caracter == '\n') {
+                    int temporal = 0;
+                    while (comando_ejecutar[temporal] != ' ') {
+                        if (comando_ejecutar[temporal] == '\\') {
+                            contador = temporal - 1;
+                            bandera= 1;
+                        }
+                        temporal++;
+                    }
+                    if (bandera == 1) {
+                        bandera = 0;
+                    } else {
+                        if (comando_ejecutar[0] != '\n') {
+                            validar(comando_ejecutar);
+                            vaciar_vector(comando_ejecutar);
+                            contador = 0;
+                            bandera = 0;
+                        }
+                    }
+                }
+
+            }
+
         }
-
-        while(tamanio==0)
-        {
-            printf("Ingrese un tamanio mayor que Cero\n");
-        }
-
-
-        if(tamanio!=0){
-            repetir=1;
-        }
-
     }
 
-    printf("Ingrese la ruta de destino...\n");
-    scanf("%s",&ruta);
+    fclose(f);
+}
+
+
+int es_fichero(char  *ruta)
+{
+    //recoge la informacion
+    struct stat datos;
+
+    //verificar si no viene vacio
+    if(ruta== NULL)
+        return 0;
+
+    if (lstat (ruta, &datos) == -1)
+    {
+        //printf ("No existe \n");
+        return 0;
+    }
+    else
+    {
+        /* Se comprueba si es un directorio */
+        if (S_ISREG(datos.st_mode)){
+            return 1;
+        }
+        /* Es otra cosa */
+        else
+            return 0;
+
+    }
+}
+
+int es_directorio(char  *directorio)
+{
+    //recoge la informacion
+    struct stat datos;
+
+    //verificar si no viene vacio
+    if(directorio == NULL)
+        return 0;
+
+    if (lstat (directorio, &datos) == -1)
+    {
+        //printf ("no existe\n");
+        return 0;
+    }
+    else
+    {
+        /* Se comprueba si es un directorio */
+        if (S_ISDIR(datos.st_mode)){
+            //printf ("es un directorio\n");
+            return 1;
+        }
+        /* Es otra cosa */
+        else
+            return 0;
+
+    }
+}
+
+void eliminar_disco(char ruta[100])
+{
+
+    if(es_fichero(ruta))
+    {
+        //esta manera de eliminar es usando el la libreria Dir.h
+        //unlink (ruta);
+        char path[100]="rm ";
+        strcat(path,ruta);
+        system(path);
+    }
+}
+
+void crear_disco_nuevo(char size[], char name[], char unit, char path[])
+{
+    struct_mbr infodisco;
 
     //asignar datos en la variable infodisco de tipo mbr
-    infodisco.mbr_tamanio = tamanio;
-    infodisco.mbr_disk_signature=0;
+    sprintf(infodisco.nombre,name);
+    if(unit=='K'){
+        infodisco.mbr_tamanio = (int)atoi(size)*1024;
+    }
+    else
+    {
+        infodisco.mbr_tamanio = (int)atoi(size)*1024*1024;
+    }
+
+    infodisco.mbr_disk_signature=contador_asignature;
     infodisco.mbr_partition_1.part_size=0;
     infodisco.mbr_partition_2.part_size=0;
     infodisco.mbr_partition_3.part_size=0;
     infodisco.mbr_partition_4.part_size=0;
+    contador_asignature+=2;
 
     printf("Creando disco...\n");
 
     //Si el numero que retorna es igual a 1 indica que es un directorio
-    if(escribeInfoDirectorio(ruta)==1)
+    if(es_directorio(path))
     {
-        printf("se encontro el directorio %s\n", ruta);
+        //Metodo que concatena dos vectores y lo asigna a una variable global
+        set_disco(path,infodisco.nombre);
+        printf("El directorio existe %s ....\n", path);
+    }
+    else
+    {
+        char directorio_nuevo[100];
+        sprintf(directorio_nuevo,"%s%s","mkdir ",path);
+        system(directorio_nuevo);
+        //mkdir(directorio_nuevo,777);
+        printf("Se creo %s en %s..",name, path);
+
     }
 
-    //Si el numero que retorna es igual a 1 indica que es un fichero
-    if(escribeInfoDirectorio(ruta)==0)
-    {
-        /*
-         * Se crea un directorio DIRECTORIO con permisos 777 y se comprueba.
-         * 4+2+1=7 es decir puedo leer,escribir y ejecutar
-         */
 
-
-        //mkdir (ruta, 0777);    <=== esta seria la instruccion don la esta libreria
-
-
-        system("mkdir /home/jonatan/hobbitelmashueco/");
-
-    }
 
     //Metodo que concatena dos vectores y lo asigna a una variable global
-    set_disco(ruta,infodisco.nombre);
+    set_disco(path,infodisco.nombre);
+
 
     FILE *f = fopen (directorio, "w+b");
 
-    if(opt==1)
+    int tamanio=atoi(size);
+
+    //tamanio en bytes
+    if(unit=='k' || unit=='K')
     {
-        //tamanio en bytes
-        for(ifor=0;ifor<tamanio;ifor++)
+        int x;
+        for(x=0;x<tamanio;x++)
             fwrite (buffer, sizeof(buffer), 1024, f);
     }
-
-    if(opt==2 || opt==3)
+    else
     {
         //tamanio en megabytes
-        for(ifor=0;ifor<tamanio*1024;ifor++)
+        int x;
+        for(x=0;x<tamanio*1024;x++)
             fwrite (buffer, sizeof(buffer), 1024, f);
     }
 
@@ -258,268 +319,186 @@ void crear_disco(){
     printf("en %s\n\n", directorio);
 }
 
-//Metodo para validar una ruta o fichero
-int escribeInfoDirectorio(char *nombreFichero)
+int crear_particion_(char size[], char unit, char path[], char name[], char fit[], char type)
 {
-
-    /*
-     * Estructura para recoger la información del fichero.
-     */
-    struct stat datosFichero;
-
-    /*
-     * Comprobación del parámetro de entrada
-     */
-    if (nombreFichero == NULL)
-        return 0;
-
-    /*
-     * Empezamos a escribir el resultado de la comprobación.
-     */
-    printf ("El fichero %s --> ", nombreFichero);
-
-    /*
-     * Se comprueba si existe el fichero.
-     * ¡Atención!. En esta llamada a lstat() se rellena datosFichero,
-     * y por ello se puede usar datosFichero->st_mode en los siguientes if.
-     */
-    if (lstat (nombreFichero, &datosFichero) == -1)
+    if(es_fichero(path))
     {
-        printf ("no existe\n");
-        return 0;
-    }
-    else
-    {
-        /* Se comprueba si es un fichero normal o un link */
-        if (S_ISREG(datosFichero.st_mode)){
-            printf ("es un fichero\n");
-            return 2;
-        }else{
+        struct_mbr tmp;
+        FILE * f = fopen(path, "rb+");
 
-            /* Se comprueba si es un directorio */
-            if (S_ISDIR(datosFichero.st_mode)){
-                printf ("es un directorio\n");
-                return 1;
-            }
-
-            /* Es otra cosa */
-            else
-                printf ("Sepa que es...!!\n");
-        }
-
-    }
-}
-
-void eliminar_disco()
-{
-    char ruta[52];
-    printf("Ingrese la ruta del Disco a eliminar...\n");
-    scanf("%s", &ruta);
-    if(escribeInfoDirectorio(ruta)==2)
-    {
-        //esta manera de eliminar es usando el la libreria Dir.h
-        unlink (ruta);
-    }
-    else
-    {
-        printf("No es un fichero la ruta ingresada..!!");
-    }
-
-}
-
-void crear_particion()
-{
-
-    char ruta[52]="/home/jonatan/lol.dsk";
-    char tamanio[52];
-    char nom[52];
-
-
-
-    printf("ingrese el tamanio..\n");
-    scanf("%s", &tamanio);
-    /*printf("Ingrese el la ruta..\n");
-    scanf("%s", &ruta);
-    printf("ingrese el nombre de la particion..\n");
-    scanf("%s", &nom);
-    */
-
-    if(escribeInfoDirectorio(ruta)==2)
-    {
-
-        printf("\n");
-        printf("**********************\n");
-        printf("RUTA DE DISCO: %s \n",ruta);
-        printf("**********************\n");
-
-
-
-        struct_mbr infodisco;
-        FILE *f=fopen(ruta, "rb+");
-        //inicio del archivo
         rewind(f);
-        //leer el primer bloque del archivo
-        fread(&infodisco, sizeof(infodisco), 1, f);
+        fread(&tmp, sizeof (tmp), 1, f);
         fclose(f);
 
-        //mostrar informacion del bloque de tipo struct_mbr
-        printf("tamaño: %d MB \n", infodisco.mbr_tamanio);
-        printf("particiones: %d\n\n", 0);
-        printf("Dato %d \n",infodisco.mbr_partition_1.part_size);
-        printf("Dato %d \n",infodisco.mbr_partition_2.part_size);
-        printf("Dato %d \n",infodisco.mbr_partition_3.part_size);
-        printf("Dato %d \n",infodisco.mbr_partition_4.part_size);
+        struct_partition nueva;
+
+        nueva.part_status = 'f';
+        nueva.part_type = type;
+        sprintf(nueva.part_fit,fit);
+        //nueva.part_start = (int) sizeof (tmp);
+        //int a;
 
 
-        //if(infodisco.mbr_partition_1.part_size==0)
-            crear_particion_opciones(infodisco,tamanio, ruta);
-        //else
-            //printf("\n!!!!!!!!!!!!!!!!!!!!!\nEl disco duro ya contiene 4 particiones primarias \nFormatear para crear nuevas\n!!!!!!!!!!!!!!!!!!!!!\n\n");
-        //entrar_al_disco(unidad);
+        if(unit=='B')
+        {
+              nueva.part_size = (int)atoi(size);
+        }
+        else if(unit=='K')
+        {
+              nueva.part_size=(int)atof(size)*1024;
+        }
+         else
+        {
+            nueva.part_size=(int)atof(size)*1024*1024;
+
+        }
+
+
+        int size_;
+        if (tmp.mbr_partition_1.part_size == 0)
+        {
+
+
+            tmp.mbr_partition_1.part_status = nueva.part_status;
+            tmp.mbr_partition_1.part_type = nueva.part_type;
+            sprintf(tmp.mbr_partition_1.part_fit,nueva.part_fit);
+            tmp.mbr_partition_1.part_start = (int)sizeof(tmp);
+            tmp.mbr_partition_1.part_size = nueva.part_size;
+            sprintf(tmp.mbr_partition_1.part_name, name);
+
+            f = fopen(path, "rb+");
+            rewind(f);
+            fwrite(&tmp, sizeof (tmp), 1, f);
+            fclose(f);
+
+        }
+
+        else if (tmp.mbr_partition_2.part_size == 0)
+        {
+            int tam=tmp.mbr_partition_1.part_size;
+            size_=sizeof(tmp)+tam;
+            tmp.mbr_partition_2.part_status = nueva.part_status;
+            tmp.mbr_partition_2.part_type = nueva.part_type;
+            sprintf(tmp.mbr_partition_2.part_fit,nueva.part_fit);
+            tmp.mbr_partition_2.part_start = size_;
+            tmp.mbr_partition_2.part_size = nueva.part_size;
+            sprintf(tmp.mbr_partition_2.part_name, name);
+
+            f = fopen(path, "rb+");
+            rewind(f);
+            fwrite(&tmp, sizeof (tmp), 1, f);
+            fclose(f);
+
+        }
+        else if (tmp.mbr_partition_3.part_size == 0) {
+
+            int tam=tmp.mbr_partition_2.part_size;
+            size_=sizeof(tmp)+tam;
+            tmp.mbr_partition_3.part_status = nueva.part_status;
+            tmp.mbr_partition_3.part_type = nueva.part_type;
+            sprintf(tmp.mbr_partition_3.part_fit,nueva.part_fit);
+            tmp.mbr_partition_3.part_start = size_;
+            tmp.mbr_partition_3.part_size = nueva.part_size;
+            sprintf(tmp.mbr_partition_3.part_name, name);
+
+            f = fopen(path, "rb+");
+            rewind(f);
+            fwrite(&tmp, sizeof (tmp), 1, f);
+            fclose(f);
+
+        }
+        else
+        {
+            int tam=tmp.mbr_partition_3.part_size;
+            size_=sizeof(tmp)+tam;
+            tmp.mbr_partition_4.part_status = nueva.part_status;
+            tmp.mbr_partition_4.part_type = nueva.part_type;
+            sprintf(tmp.mbr_partition_4.part_fit,nueva.part_fit);
+            tmp.mbr_partition_4.part_start = size_;
+            tmp.mbr_partition_4.part_size = nueva.part_size;
+            sprintf(tmp.mbr_partition_4.part_name, name);
+
+            f = fopen(path, "rb+");
+            rewind(f);
+            fwrite(&tmp, sizeof (tmp), 1, f);
+            fclose(f);
+
+        }
+
+
+        struct_mbr dat_mbr;
+        f = fopen(path, "rb+");
+        rewind(f);
+        fread(&dat_mbr, (int)sizeof (dat_mbr), 1, f);
+        fclose(f);
+
+        timer_t t;
+        t=time(NULL);
+        struct tm *tm;
+        char fechayhora[100];
+        tm=localtime(&t);
+        strftime(fechayhora, 100, "%d/%m/%Y %H:%M:%S", tm);
+
+        printf("\n************************************\n");
+        printf("DATOS DISCO\n");
+        printf("TAMANIO: %d BYTES\n", dat_mbr.mbr_tamanio);
+        printf("NOMBRE : %s\n", dat_mbr.nombre);
+        printf("FECHA Y HORA: %s\n",fechayhora);
+        printf("No. ASIGNATURE: %d\n", dat_mbr.mbr_disk_signature);
+        printf("************************************");
+        if(dat_mbr.mbr_partition_1.part_size>0){
+            printf("\nDATOS PARTICION No. 1\n");
+            printf("************************************\n");
+            printf("\STATUS: %c\n", dat_mbr.mbr_partition_1.part_status);
+            printf("\TYPE: %c\n", dat_mbr.mbr_partition_1.part_type);
+            printf("\FIT: %s\n", dat_mbr.mbr_partition_1.part_fit);
+            printf("\START: %d\n", dat_mbr.mbr_partition_1.part_start);
+            printf("\SIZE: %d BYTES\n", dat_mbr.mbr_partition_1.part_size);
+            printf("\NAME: %s\n", dat_mbr.mbr_partition_1.part_name);
+        }
+        if(dat_mbr.mbr_partition_2.part_size>0){
+            printf("\nDATOS PARTICION No. 2\n");
+            printf("************************************\n");
+            printf("\STATUS: %c\n", dat_mbr.mbr_partition_2.part_status);
+            printf("\TYPE: %c\n", dat_mbr.mbr_partition_2.part_type);
+            printf("\FIT: %s\n", dat_mbr.mbr_partition_2.part_fit);
+            printf("\START: %d\n", dat_mbr.mbr_partition_2.part_start);
+            printf("\SIZE: %d BYTES\n", dat_mbr.mbr_partition_2.part_size);
+            printf("\NAME: %s\n", dat_mbr.mbr_partition_2.part_name);
+        }
+        if(dat_mbr.mbr_partition_3.part_size>0){
+            printf("\nDATOS PARTICION No. 3\n");
+            printf("************************************\n");
+            printf("\STATUS: %c\n", dat_mbr.mbr_partition_3.part_status);
+            printf("\TYPE: %c\n", dat_mbr.mbr_partition_3.part_type);
+            printf("\FIT: %s\n", dat_mbr.mbr_partition_3.part_fit);
+            printf("\START: %d\n", dat_mbr.mbr_partition_3.part_start);
+            printf("\SIZE: %d BYTES\n", dat_mbr.mbr_partition_3.part_size);
+            printf("\NAME: %s\n", dat_mbr.mbr_partition_3.part_name);
+        }
+        if(dat_mbr.mbr_partition_4.part_size>0){
+            printf("\nDATOS PARTICION No. 4\n");
+            printf("************************************\n");
+            printf("\STATUS: %c\n", dat_mbr.mbr_partition_4.part_status);
+            printf("\TYPE: %c\n", dat_mbr.mbr_partition_4.part_type);
+            printf("\FIT: %s\n", dat_mbr.mbr_partition_4.part_fit);
+            printf("\START: %d\n", dat_mbr.mbr_partition_4.part_start);
+            printf("\SIZE: %d BYTES\n", dat_mbr.mbr_partition_4.part_size);
+            printf("\NAME: %s\n", dat_mbr.mbr_partition_4.part_name);
+        }
+
+    return 1;
     }
     else
     {
-        printf("El archivo con ruta %s no existe...!!",ruta);
+        return 0;
     }
-
-}
-
-//creando particiones, mostrando opciones
-void crear_particion_opciones(struct_mbr infodisco,char tamanio_partition[52], char ruta[52])
-{
-    printf("\n");
-    printf("**********************\n");
-    printf("CREANDO PARTICION\n");
-    printf("DISCO: %s \n",infodisco.nombre);
-    printf("**********************\n\n");
-
-    printf("********antes*********** \n");
-    timer_t t;
-    t=time(NULL);
-    FILE *f;
-    f=fopen(ruta, "rb+"); //lee numeros binarios
-    fseek(f,0, SEEK_SET);
-    struct_mbr m1;
-    fread(&m1, sizeof(m1), 1, f);
-    //datos que ya esta escritos en el disco
-    printf("tamaño: %d MB \n", m1.mbr_tamanio);
-    printf("particiones: %d\n\n", 0);
-    printf("Dato %d \n",m1.mbr_partition_1.part_size);
-    printf("Dato %d \n",m1.mbr_partition_2.part_size);
-    printf("Dato %d \n",m1.mbr_partition_3.part_size);
-    printf("Dato %d \n",m1.mbr_partition_4.part_size);
-    fclose(f);
 
 
 }
 
-void ver()
-{
-
-    FILE *f;
-    f=fopen("/home/jonatan/lol.dsk","rb+");
-    struct_mbr l;
-    rewind(f);
-    fread(&l,sizeof(l),1, f);
-    /*tamanio_disco=l.mbr_tamanio*1024*1024;//tamanio en bytes
-    printf("\ntamanio disco %d bytes\n", tamanio_disco);
-    printf("nombre de disco %s\n", l.nombre);
-    printf("tamanio particion %d\n", l.mbr_partition_1.part_size);
-    printf("nombre particion %s\n", l.mbr_partition_1.part_name);
-    printf("inicio %d\n", l.mbr_partition_1.part_start);
-    printf("tipo %c\n", l.mbr_partition_1.part_type);*/
-    fclose(f);
-
-    //tamanio_disco_libre=tamanio_disco-sizeof(l);
-
-    //tamanio de particion 1
-    f=fopen("/home/jonatan/lol.dsk","rb+");
-    struct_mbr tem;
-    fseek(f,0, SEEK_SET);
-    if(l.mbr_partition_1.part_size==0){
-
-        numero_particiones_primarias+=1;
-        tem.mbr_tamanio=l.mbr_tamanio;
-        tem.mbr_fecha_creacion=l.mbr_fecha_creacion;
-        sprintf(tem.nombre,l.nombre);
-        sprintf(tem.mbr_partition_1.part_fit,"WF");
-        sprintf(tem.mbr_partition_1.part_name,"particion 1");
-        tem.mbr_partition_1.part_size=12*1024*1024;
-        tem.mbr_partition_1.part_start=sizeof(tem);
-        tem.mbr_partition_1.part_status="f"; //v de verdadero
-        tem.mbr_partition_1.part_type='p';
-        fwrite(&tem, sizeof(tem),1,f );
-    }
-    fclose(f);
 
 
-    f=fopen("/home/jonatan/lol.dsk","rb+");
-    rewind(f);
-    fread(&l,0,1, f);
-    /*tamanio_disco=l.mbr_tamanio*1024*1024;//tamanio en bytes
-    printf("\ntamanio disco %d bytes\n", tamanio_disco);
-    printf("nombre de disco %s\n", l.nombre);
-    printf("tamanio particion %d\n", l.mbr_partition_1.part_size);
-    printf("nombre particion %s\n", l.mbr_partition_1.part_name);
-    printf("inicio %d\n", l.mbr_partition_1.part_start);
-    printf("tipo %c\n", l.mbr_partition_1.part_type);*/
-    fclose(f);
-
-    //tamanio de particion 2
-    f=fopen("/home/jonatan/lol.dsk","rb+");
-    fseek(f,0, SEEK_SET);
-    if(l.mbr_partition_2.part_size==0){
-        numero_particiones_primarias+=1;
-        tem.mbr_tamanio=l.mbr_tamanio;
-        tem.mbr_fecha_creacion=l.mbr_fecha_creacion;
-        sprintf(tem.nombre,l.nombre);
-        tem.mbr_partition_1=l.mbr_partition_1;
-        tem.mbr_partition_2.part_fit='l';
-        sprintf(tem.mbr_partition_2.part_name,"particion 2");
-        tem.mbr_partition_2.part_size=12*1024*1024;
-        tem.mbr_partition_2.part_start=sizeof(tem)+12*1024*1024;
-        tem.mbr_partition_2.part_status="f"; //v si esta activo f si esta desactivo
-        tem.mbr_partition_2.part_type='p';
-        fwrite(&tem, sizeof(tem),1,f );
-    }
-
-    fclose(f);
-
-
-
-
-    f=fopen("/home/jonatan/lol.dsk","rb+");
-    rewind(f);
-    fread(&l,0,1, f);
-    struct tm *tm;
-    char fecha[50];
-    char hora[50];
-    l.mbr_fecha_creacion=time(NULL);
-    tm=localtime(&(l.mbr_fecha_creacion));
-    //strftime(fecha, 50, "%d/%m/%Y", tm);
-    //strftime(hora, 50, "%H:%M:%S", tm);
-    printf("\n\n");
-    printf("\nTAMANIO DISCO: %d bytes\n", l.mbr_tamanio);
-    printf("NOMBRE DISCO %s\n", l.nombre);
-    printf("\n\n");
-    printf("TAMANIO PARTICION_1 %d byte\n", l.mbr_partition_1.part_size);
-    printf("NOMBRE PARTICION_1 %s\n", l.mbr_partition_1.part_name);
-    printf("INICIO PARTICION_1 %d\n", l.mbr_partition_1.part_start);
-    printf("TIPO PARTICION_1 %c\n", l.mbr_partition_1.part_type);
-    printf("STATUS PARTICION_1 %c\n", l.mbr_partition_1.part_status);
-    printf("AJUSTE PARTICION_1 %c\n", l.mbr_partition_1.part_fit);
-    printf("\n\n");
-    printf("TAMANIO PARTICION_2 %d byte\n", l.mbr_partition_2.part_size);
-    printf("NOMBRE PARTICION_2 %s\n", l.mbr_partition_2.part_name);
-    printf("INICIO PARTICION_2 %d\n", l.mbr_partition_2.part_start);
-    printf("TIPO PARTICION_2 %c\n", l.mbr_partition_2.part_type);
-    printf("STATUS PARTICION_2 %c\n", l.mbr_partition_2.part_status);
-    printf("AJUSTE PARTICION_2 %c\n", l.mbr_partition_2.part_fit);
-    //printf ("Fecha creacion: %s\n", fecha);
-    //printf ("Hora de creacion: %s\n", hora);
-    fclose(f);
-
-}
 
 
 void montar_disco()
@@ -564,12 +543,12 @@ void validar(char comando_entrada[])
         //recorrer el vector para comparar cada posicion
         case 0:
             //validando la palabra reservada para pasar a otro estado
-            if(comando_entrada[columna]=='m' || comando_entrada[columna]=='M' &&
-                    comando_entrada[columna+1]=='k' || comando_entrada[columna+1]=='K' &&
-                    comando_entrada[columna+2]=='d' || comando_entrada[columna+2]=='D' &&
-                    comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I' &&
-                    comando_entrada[columna+4]=='s' || comando_entrada[columna+4]=='S' &&
-                    comando_entrada[columna+5]=='k' || comando_entrada[columna+5]=='K' )
+            if((comando_entrada[columna]=='m' || comando_entrada[columna]=='M') &&
+                    (comando_entrada[columna+1]=='k' || comando_entrada[columna+1]=='K') &&
+                    (comando_entrada[columna+2]=='d' || comando_entrada[columna+2]=='D') &&
+                    (comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I') &&
+                    (comando_entrada[columna+4]=='s' || comando_entrada[columna+4]=='S') &&
+                    (comando_entrada[columna+5]=='k' || comando_entrada[columna+5]=='K') )
             {
                 //el memset limpia la cadena
                 vaciar_vector(size);;
@@ -587,12 +566,24 @@ void validar(char comando_entrada[])
                 bandera=1;
 
             }
-            else if(comando_entrada[columna]=='r' || comando_entrada[columna]=='R' &&
-                    comando_entrada[columna+1]=='m' || comando_entrada[columna+1]=='M' &&
-                    comando_entrada[columna+2]=='d' || comando_entrada[columna+2]=='D' &&
-                    comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I' &&
-                    comando_entrada[columna+4]=='s' || comando_entrada[columna+4]=='S' &&
-                    comando_entrada[columna+5]=='k' || comando_entrada[columna+5]=='K' )
+
+            else if ((comando_entrada[columna] == 'e' || comando_entrada[columna] == 'E') &&
+                     (comando_entrada[columna + 1] == 'x' || comando_entrada[columna + 1] == 'X') &&
+                     (comando_entrada[columna + 2] == 'e' || comando_entrada[columna + 2] == 'E') &&
+                     (comando_entrada[columna + 3] == 'c' || comando_entrada[columna + 3] == 'C'))
+
+            {
+                estado_actual=2;
+                columna=columna+4;
+                bandera_exec=1;
+
+            }
+            else if((comando_entrada[columna]=='r' || comando_entrada[columna]=='R') &&
+                    (comando_entrada[columna+1]=='m' || comando_entrada[columna+1]=='M') &&
+                    (comando_entrada[columna+2]=='d' || comando_entrada[columna+2]=='D' )&&
+                    (comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I') &&
+                    (comando_entrada[columna+4]=='s' || comando_entrada[columna+4]=='S') &&
+                    (comando_entrada[columna+5]=='k' || comando_entrada[columna+5]=='K') )
             {
                 //el memset limpia la cadena
                 vaciar_vector(size);;
@@ -611,11 +602,11 @@ void validar(char comando_entrada[])
 
             }
 
-            else if(comando_entrada[columna]=='f' || comando_entrada[columna]=='F' &&
-                    comando_entrada[columna+1]=='d' || comando_entrada[columna+1]=='D' &&
-                    comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I' &&
-                    comando_entrada[columna+3]=='s' || comando_entrada[columna+3]=='S' &&
-                    comando_entrada[columna+4]=='k' || comando_entrada[columna+4]=='K' )
+            else if((comando_entrada[columna]=='f' || comando_entrada[columna]=='F') &&
+                    (comando_entrada[columna+1]=='d' || comando_entrada[columna+1]=='D') &&
+                    (comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I') &&
+                    (comando_entrada[columna+3]=='s' || comando_entrada[columna+3]=='S') &&
+                    (comando_entrada[columna+4]=='k' || comando_entrada[columna+4]=='K') )
             {
                 //el memset limpia la cadena
                 vaciar_vector(size);;
@@ -634,11 +625,11 @@ void validar(char comando_entrada[])
 
             }
 
-            else if(comando_entrada[columna]=='m' || comando_entrada[columna]=='M' &&
-                    comando_entrada[columna+1]=='o' || comando_entrada[columna+1]=='O' &&
-                    comando_entrada[columna+2]=='u' || comando_entrada[columna+2]=='U' &&
-                    comando_entrada[columna+3]=='n' || comando_entrada[columna+3]=='N' &&
-                    comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T' )
+            else if((comando_entrada[columna]=='m' || comando_entrada[columna]=='M') &&
+                    (comando_entrada[columna+1]=='o' || comando_entrada[columna+1]=='O') &&
+                    (comando_entrada[columna+2]=='u' || comando_entrada[columna+2]=='U') &&
+                    (comando_entrada[columna+3]=='n' || comando_entrada[columna+3]=='N') &&
+                    (comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T') )
             {
 
                 bandera_mount=1;
@@ -647,12 +638,12 @@ void validar(char comando_entrada[])
 
             }
 
-            else if(comando_entrada[columna]=='u' || comando_entrada[columna]=='U' &&
-                    comando_entrada[columna+1]=='m' || comando_entrada[columna+1]=='M' &&
-                    comando_entrada[columna+2]=='o' || comando_entrada[columna+2]=='O' &&
-                    comando_entrada[columna+3]=='u' || comando_entrada[columna+3]=='U' &&
-                    comando_entrada[columna+4]=='n' || comando_entrada[columna+4]=='N' &&
-                    comando_entrada[columna+5]=='t' || comando_entrada[columna+5]=='T' )
+            else if((comando_entrada[columna]=='u' || comando_entrada[columna]=='U') &&
+                    (comando_entrada[columna+1]=='m' || comando_entrada[columna+1]=='M') &&
+                    (comando_entrada[columna+2]=='o' || comando_entrada[columna+2]=='O') &&
+                    (comando_entrada[columna+3]=='u' || comando_entrada[columna+3]=='U') &&
+                    (comando_entrada[columna+4]=='n' || comando_entrada[columna+4]=='N') &&
+                    (comando_entrada[columna+5]=='t' || comando_entrada[columna+5]=='T') )
             {
 
                 bandera_umount=1;
@@ -661,8 +652,8 @@ void validar(char comando_entrada[])
 
 
 
-            else if(comando_entrada[columna]=='c' || comando_entrada[columna]=='C' &&
-                    comando_entrada[columna+1]=='c' || comando_entrada[columna+1]=='C')
+            else if((comando_entrada[columna]=='c' || comando_entrada[columna]=='C') &&
+                    (comando_entrada[columna+1]=='c' || comando_entrada[columna+1]=='C'))
             {
 
                 columna +=2;
@@ -675,6 +666,7 @@ void validar(char comando_entrada[])
             {
                 estado_actual=60;
                 columna++;
+                bandera_comentario=1;
 
             }
             else
@@ -693,10 +685,10 @@ void validar(char comando_entrada[])
 
             }
             else if(comando_entrada[columna] == '-' &&
-                        comando_entrada[columna+1]=='s' || comando_entrada[columna+1]=='S' &&
-                        comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I' &&
-                        comando_entrada[columna+3]=='z' || comando_entrada[columna+3]=='Z' &&
-                        comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E' &&
+                        (comando_entrada[columna+1]=='s' || comando_entrada[columna+1]=='S') &&
+                        (comando_entrada[columna+2]=='i' || comando_entrada[columna+2]=='I') &&
+                        (comando_entrada[columna+3]=='z' || comando_entrada[columna+3]=='Z') &&
+                        (comando_entrada[columna+4]=='e' || comando_entrada[columna+4]=='E') &&
                         comando_entrada[columna+5]==':' &&
                         comando_entrada[columna+6]==':')
             {
@@ -731,10 +723,10 @@ void validar(char comando_entrada[])
             }
 
             else if (comando_entrada[columna] == '+' &&
-                     comando_entrada[columna+1]=='u' || comando_entrada[columna+1]=='U' &&
-                     comando_entrada[columna+2]=='n' || comando_entrada[columna+2]=='N' &&
-                     comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I' &&
-                     comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T' &&
+                     (comando_entrada[columna+1]=='u' || comando_entrada[columna+1]=='U') &&
+                     (comando_entrada[columna+2]=='n' || comando_entrada[columna+2]=='N') &&
+                     (comando_entrada[columna+3]=='i' || comando_entrada[columna+3]=='I') &&
+                     (comando_entrada[columna+4]=='t' || comando_entrada[columna+4]=='T') &&
                      comando_entrada[columna+5]==':' &&
                      comando_entrada[columna+6]==':')
             {
@@ -860,7 +852,7 @@ void validar(char comando_entrada[])
                     bandera_fin = 0;
                 }
                 if (unit == '\0') {
-                    printf("¡Importante...! Si no ingreso el valor de =unit:: se toma por defaul M.\n");
+                    printf("¡Importante...! Si no ingreso el valor de +unit:: se toma por defaul M.\n");
                     unit = 'M';
                 }
 
@@ -875,15 +867,22 @@ void validar(char comando_entrada[])
                 }
 
                 if(bandera_fin==1){
+
                     if (bandera_mkdisk== 1)
                     {
-                        printf("size: %s\n", size);
+                        /*printf("size: %s\n", size);
                         printf("MB o B 2: %c\n", unit);
                         printf("path: %s\n", path);
-                        printf("name: %s\n", name);
+                        printf("name: %s\n", name);*/
+
+                        crear_disco_nuevo(size, name, unit, path);
                         bandera_mkdisk=0;
-                        bandera_fin=0;
+
+
+
                     }
+
+                    bandera_fin=0;
 
                 }
 
@@ -895,6 +894,54 @@ void validar(char comando_entrada[])
             break;
 
         case 2:
+
+            if(comando_entrada[columna]==' ' || comando_entrada[columna]=='\\' ||comando_entrada[columna]=='\n')
+            {
+                //cuando encuentra espacio, barra inclinada o un salto de linea se queda en el mismo estado
+                estado_actual = 2;
+                columna++;
+
+            }
+
+            else
+            {
+                int contador = 0;
+                while (comando_entrada[columna] != ' ') {
+                    if (comando_entrada[columna] == '.' && comando_entrada[columna + 1] == 's' && comando_entrada[columna+ 2] == 'h') {
+                        path[contador] = '.';
+                        path[contador + 1] = 's';
+                        path[contador + 2] = 'h';
+                        contador = contador + 2;
+                        break;
+                    }
+                    path[contador] = comando_entrada[columna];
+                    contador++;
+                    columna++;
+
+                }
+
+
+                if (path[contador] == 'h' && path[contador - 1] == 's' && path[contador - 2] == '.')
+                {
+
+                    if (path[0] != "\0" ) {
+                        char * aux = &path;
+                        archivo_masivo(aux);
+                        bandera_fin= 0;
+                    }
+                    else
+                    {
+                        printf("Error...\n");
+                        bandera_fin= 0;
+                    }
+                } else {
+                    printf("No se puede abrir....\n");
+                    bandera_fin= 0;
+                }
+
+
+            }
+
 
 
             break;
@@ -1048,7 +1095,7 @@ void validar(char comando_entrada[])
                 {
 
                     if (comando_entrada[columna]== 'p' || comando_entrada[columna]== 'P' || comando_entrada[columna] == 'l' || comando_entrada[columna] == 'L' || comando_entrada[columna] == 'e' || comando_entrada[columna] == 'E') {
-                        unit = comando_entrada[columna];
+                        type = comando_entrada[columna];
                         columna++;
                     }
                     else if(comando_entrada[columna]=='\n')
@@ -1113,6 +1160,8 @@ void validar(char comando_entrada[])
             {
                 estado_actual=12;
                 columna=columna+9;
+                bandera_name=1;
+                bandera_path=1;
                 int contador = 0;
 
                 while (comando_entrada[columna] != ' ') {
@@ -1187,13 +1236,9 @@ void validar(char comando_entrada[])
 
             else
             {
-                if (size[0] == '\0') {
+                if (size[0] == ' ') {
                     printf("¡Importante...! Debe ingresar el tamanio del particion.\n");
                     bandera_fin = 0;
-                }
-                if (unit == '\0') {
-                    printf("¡Importante...! Si no ingreso el valor de +unit:: se toma por defaul k.\n");
-                    unit = 'K';
                 }
 
                 if (path[0] == '\0') {
@@ -1201,27 +1246,40 @@ void validar(char comando_entrada[])
                     bandera_fin= 0;
                 }
 
-                if(type=='\0'){
-                    printf("¡Importante...!  Si no ingreso el valor de +type:: se toma por defaul P.\n");
-                    type='P';
-                }
-
                 if (name[0] == '\0') {
                     printf("¡Importante...!  escribe el nombre entre las comiilas dobles.\n");
                     bandera_fin = 0;
                 }
 
-                if(delete_=='\0')
-                {
-                    //printf("Importante...! Si no ingreso el valor de +type:: se toma por defaul P.\n");
-                    //type='P';
+                if (unit == '\0') {
+                    printf("¡Importante...! Si no ingreso el valor de +unit:: se toma por defaul k.\n");
+                    unit = 'K';
+                }
 
+
+                if(type =='\0'){
+                    printf("¡Importante...! Si no ingreso el valor de +type:: se toma por defaul P.\n");
+                    type='P';
+                }
+
+
+
+                if(delete_==' ' )
+                {
+                    bandera_fin=0;
+
+                }
+                else
+                {
+                    if(bandera_name==1 && bandera_path==1){
+                        printf("tiene lo necesario para usar delete\n");
+                    }
                 }
                 if(add=='\0')
                 {
 
                 }
-                if(fit=='\0')
+                if(fit[0]=='\0' || fit[0]==' ')
                 {
                     printf("¡Importante...! no se escribio el comando +fit se ingreso por defecto el valor WF.\n");
                     fit[0]='W';
@@ -1231,29 +1289,31 @@ void validar(char comando_entrada[])
                 if(bandera_fin==1){
                     if (bandera_fdisk== 1)
                     {
-                        printf("size: %s\n", size);
+                        /*printf("size: %s\n", size);
                         printf("unit: %c\n", unit);
                         printf("path: %s\n", path);
                         printf("name: %s\n", name);
+                        printf("type: %c\n", type);
                         printf("delete: %s\n", delete_);
-                        printf("fit: %s\n", fit);
-                        bandera_fdisk=0;
-                        bandera_fin=0;
+                        printf("fit: %s\n", fit);*/
+
+                        if(crear_particion_(size, unit, path, name, fit, type))
+                        {
+                            bandera_fdisk=0;
+                            bandera_fin=0;
+                        }
+                        else
+                        {
+                            bandera_fdisk=0;
+                            bandera_fin=0;
+                        }
+
                     }
 
                 }
 
 
             }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1307,9 +1367,25 @@ void validar(char comando_entrada[])
                 {
                     if(bandera_rmdisk==1)
                     {
-                        printf("path para eliminar: %s\n", path);
-                        bandera_rmdisk=0;
-                        bandera_fin=0;
+                        char c;
+                        printf("Quieres eliminar el archivo s/n.....\n");
+                        scanf("%c",&c);
+
+
+                        if(c=='s')
+                        {
+                            eliminar_disco(path);
+                            printf("Eliminado exitosamente......\n");
+                            bandera_rmdisk=0;
+                            bandera_fin= 0;
+                        }
+                        else
+                        {
+                            printf("Cancelando ===>  :( ...\n");
+                            bandera_rmdisk=0;
+                            bandera_fin= 0;
+                        }
+
                     }
 
                 }
@@ -1362,6 +1438,7 @@ void validar(char comando_entrada[])
 
         case 100:
 
+
             bandera_fin=0;
 
             break;
@@ -1375,8 +1452,9 @@ void validar(char comando_entrada[])
     }//fin del while que recorre todos los caracteres
 }
 
-//Metodo para limpiar variables
-void vaciar_vector(char vector[]) {
+//Metodo para vaciar vectores
+void vaciar_vector(char vector[])
+{
     int x;
     for (x = 0; x < strlen(vector); x++)
         vector[x] = ' ';
@@ -1398,6 +1476,10 @@ int main()
     printf("  ********************Para salir ingrese el comando cc ***********************\n");
     printf("  ****************************************************************************\n\n");
 
+
+
+//archivo_masivo("/home/jonatan/calificacion.sh");
+
     while(output !=1)
     {
 
@@ -1417,92 +1499,3 @@ int main()
 }
 
 
-
-
-/*struct numero num;
-struct caracteres carar;
-struct otro o;
-
-    FILE *f = fopen ("/home/jonatan/disco.dsk", "w+b");
-
-    rewind(f);
-    //for(ifor=0;ifor<10;ifor++)
-        fwrite (&num, sizeof(num), 1, f);
-        //120+360+120=600bytes
-
-
-    //for(ifor=0;ifor<10;ifor++)
-        //fwrite (&carar, sizeof(carar), 1, f);
-
-    //for(ifor=0;ifor<10;ifor++)
-        fwrite (&o, sizeof(o), 1, f);
-
-    //guardando informacion del disco
-
-    //fwrite(&tdisco,sizeof(tdisco),1,f);
-
-    fclose(f);
-
-
-
-    f = fopen ("/home/jonatan/disco.dsk", "w+b");
-    fseek(f,sizeof(num), SEEK_SET);
-    //sprintf(num,num,"jose")
-    printf("ingrese una frase\n");
-    char nombre[12];
-    scanf("%s",&nombre);
-    sprintf(o.cadena,nombre);
-    fwrite(&o,sizeof(o),1,f);
-    fclose(f);
-
-    f = fopen ("/home/jonatan/disco.dsk", "rb+");
-    fseek(f,sizeof(num), SEEK_SET);
-    struct otro n;
-    fread(&n, sizeof(n), 1,f);
-    printf("mi dato %s\n", n.cadena);
-    fclose(f);*/
-
-
-
-    /*time_t t;
-      struct tm *tm;
-      char fechayhora[100];
-
-      t=time(NULL);
-      tm=localtime(&t);
-
-      strftime(fechayhora, 100, "%d/%m/%Y %H:%M:%S", tm);
-      printf ("Hoy es: %s\n", fechayhora);
-
-
-    struct_partition p;
-    p.part_fit='p';
-    sprintf(p.part_name,"nombre");
-    p.part_size=100;
-    p.part_start=1005;
-    p.part_status='l';
-    p.part_type='l';
-
-    FILE *ff=fopen("/home/jonatan/entrada.txt", "w+b");
-
-    fwrite(&p,sizeof(p),1,ff);
-    fclose(ff);
-
-    struct_mbr m;
-    m.mbr_disk_signature=12;
-    m.mbr_tamanio=125;
-    m.mbr_fecha_creacion=t;
-    m.mbr_partition_1=p;
-    m.mbr_partition_3=p;
-    m.mbr_partition_3=p;
-    m.mbr_partition_3=p;
-
-
-
-    printf("mbr %d\n", sizeof(m));
-    printf("partition %d\n", sizeof(p));
-    printf("timer %d\n", sizeof(t));
-    printf("tdisco %d\n", sizeof(info_disco));*/
-
-    //menu();
-    //system("mkdir /home/jonatan/hobbitelmashueco/");
